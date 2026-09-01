@@ -1,6 +1,6 @@
 {
   "name": "Cord Player",
-  "short_name": "Cord",
+  "short_name": "Cord Player",
   "description": "Next-Generation Music & Podcast Streaming Desktop & Mobile Player",
   "start_url": "/",
   "display": "standalone",

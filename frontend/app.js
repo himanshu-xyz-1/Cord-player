@@ -1921,7 +1921,7 @@ class CordPlayer {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: track.title,
         artist: track.artist || 'Cord Player',
-        album: track.album || 'Cord Music',
+        album: track.album || 'Cord Player',
         artwork: [
           { src: art, sizes: '96x96', type: 'image/jpeg' },
           { src: art, sizes: '128x128', type: 'image/jpeg' },

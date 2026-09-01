@@ -40,7 +40,7 @@ class DiscordRPC:
                 "details": f"{title[:128]}",
                 "state": f"by {artist[:128]}" if artist else "Cord Player",
                 "large_image": thumbnail if thumbnail.startswith("http") else "cord_logo",
-                "large_text": "Cord Music Player",
+                "large_text": "Cord Player",
                 "small_image": "play" if is_playing else "pause",
                 "small_text": "Playing" if is_playing else "Paused"
             }
