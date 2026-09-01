@@ -1,0 +1,17 @@
+{
+  "name": "Cord Player",
+  "short_name": "Cord",
+  "description": "Next-Generation Music & Podcast Streaming Desktop & Mobile Player",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0B0F",
+  "theme_color": "#FF0D2E",
+  "icons": [
+    {
+      "src": "/assets/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

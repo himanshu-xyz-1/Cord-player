@@ -2,21 +2,24 @@
 
 # 🎵 Cord Player
 
-### *Next-Generation Desktop Music & Podcast Streaming Engine*
+### *Next-Generation Cross-Platform Desktop & Mobile Music Streaming Engine*
 
-[![Version](https://img.shields.io/badge/version-2.5.0-FF0D2E.svg?style=for-the-badge&logo=musicbrainz&logoColor=white)](https://github.com/)
+[![Version](https://img.shields.io/badge/version-2.5.0-FF0D2E.svg?style=for-the-badge&logo=musicbrainz&logoColor=white)](https://github.com/himanshu-xyz-1/Cord-player)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6.svg?style=for-the-badge&logo=windows&logoColor=white)](https://microsoft.com/windows)
+[![macOS](https://img.shields.io/badge/macOS-Intel%20%7C%20Apple%20Silicon-000000.svg?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com/macos)
+[![Linux](https://img.shields.io/badge/Linux-Wayland%20%7C%20X11-FCC624.svg?style=for-the-badge&logo=linux&logoColor=black)](https://archlinux.org)
+[![Android](https://img.shields.io/badge/Android-PWA%20%2F%20APK-3DDC84.svg?style=for-the-badge&logo=android&logoColor=white)](https://android.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Wayland%20%7C%20X11-FF4081.svg?style=for-the-badge&logo=linux&logoColor=white)](https://archlinux.org)
 
 <br/>
 
-> **Cord Player** is a sleek, ultra-responsive, ad-free desktop music and podcast client built with modern glassmorphism UI, real-time WebAudio processing, live synchronized karaoke lyrics, 10-band equalizer, offline downloading, and Discord Rich Presence.
+> **Cord Player** is a sleek, ultra-responsive, ad-free music & podcast player built with glassmorphism UI, real-time WebAudio processing, live synchronized karaoke lyrics, 10-band studio equalizer, offline downloading, and Discord Rich Presence. Runs natively on **Windows**, **macOS**, **Linux**, and **Android**.
 
 <br/>
 
-[✨ Features](#-key-features) • [📸 Screenshots](#-visual-showcase) • [⚡ Quick Start](#-quick-start) • [🎛️ Architecture](#-system-architecture) • [⌨️ Shortcuts](#️-keyboard-shortcuts)
+[✨ Features](#-key-features) • [📸 Screenshots](#-visual-showcase) • [⚡ Cross-Platform Quick Start](#-cross-platform-quick-start) • [📱 Phone & Android](#-phone--android-support) • [🎛️ Architecture](#-system-architecture) • [⌨️ Shortcuts](#️-keyboard-shortcuts)
 
 ---
 
@@ -105,7 +108,7 @@
       <h3>🎮 Discord Rich Presence & MediaSession</h3>
       <ul>
         <li>Broadcast current track, artist, album art, and live elapsed timer to Discord.</li>
-        <li>Native Linux OS MediaSession integration (play/pause/skip via media keys).</li>
+        <li>Native OS MediaSession integration (play/pause/skip via media keys).</li>
         <li>Multi-device output sink selector for Bluetooth headphones & DACs.</li>
       </ul>
     </td>
@@ -116,11 +119,77 @@
 
 ---
 
+## ⚡ Cross-Platform Quick Start
+
+### 🪟 Windows (10 / 11)
+
+1. Clone or download the repository:
+   ```cmd
+   git clone https://github.com/himanshu-xyz-1/Cord-player.git
+   cd Cord-player
+   ```
+2. Double-click **`run.bat`** (or execute via Command Prompt / PowerShell):
+   ```cmd
+   pip install -r requirements.txt
+   python main.py
+   ```
+> **Note**: Cord Player automatically detects **Microsoft Edge** or **Google Chrome** and launches as a native borderless desktop app with full WebAudio acceleration.
+
+<br/>
+
+### 🍎 macOS (Apple Silicon & Intel)
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/himanshu-xyz-1/Cord-player.git
+   cd Cord-player
+   ```
+2. Run via terminal:
+   ```bash
+   pip install -r requirements.txt
+   python3 main.py
+   ```
+   *(Or double-click `run.sh`)*
+
+<br/>
+
+### 🐧 Linux (Arch, Ubuntu, Fedora, Debian)
+
+```bash
+git clone https://github.com/himanshu-xyz-1/Cord-player.git
+cd Cord-player
+pip install -r requirements.txt
+python3 main.py
+```
+
+<br/>
+
+---
+
+## 📱 Phone & Android Support
+
+Cord Player includes complete **Progressive Web App (PWA)** metadata and touch optimizations, allowing it to run smoothly on smartphones:
+
+### 1. Instant Mobile App (PWA)
+1. Run Cord Player on your computer / server.
+2. On your Android or iOS phone, connect to the same Wi-Fi and open `http://<your-pc-ip>:8765` in Chrome / Safari.
+3. Tap **Menu (⋮)** → **"Install App"** or **"Add to Home screen"**.
+4. Cord Player installs as a standalone native-feeling fullscreen app with touch gestures and background audio controls.
+
+### 2. Packaging as an Android `.apk`
+To build a standalone APK for Google Play or direct sideloading:
+- **Using PWA Builder / TWA (Recommended)**: Submit the running host URL to [PWABuilder.com](https://www.pwabuilder.com) to generate a signed Android APK package.
+- **Using Capacitor / Cordova**: Wrap the `frontend/` directory with Capacitor's Android runtime (`npx cap add android && npx cap open android`).
+
+<br/>
+
+---
+
 ## 🎛️ System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph UI ["🖥️ Frontend (HTML5 / Glassmorphism CSS / JS)"]
+    subgraph UI ["🖥️ Cross-Platform Frontend (HTML5 / Glassmorphism CSS / JS)"]
         UI_Home["🏠 Home (Music & Podcasts)"]
         UI_Search["🔍 Live Search & Suggestions"]
         UI_Cinema["🎬 Cinema Mode & Synced Lyrics"]
@@ -147,38 +216,6 @@ flowchart TD
     UI -->|HTTP / REST| Backend
     Backend --> Core
     API_Audio -->|Direct Stream Chunks| UI_WebAudio
-```
-
-<br/>
-
----
-
-## ⚡ Quick Start
-
-### 1. Prerequisites
-- **Linux** (Arch, Fedora, Debian, Ubuntu) or Wayland compositor (Hyprland, Sway, GNOME, KDE)
-- **Python 3.10+**
-- **Chromium / Chrome** (or any modern Chromium-based browser for standalone app mode)
-
-### 2. Installation & Run
-
-```bash
-# Clone the repository
-git clone https://github.com/himanshuxd/cord-player.git
-cd cord-player
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Run Cord Player
-python main.py
-```
-
-Or run via the system command:
-```bash
-cord-player
-# or simply:
-cord
 ```
 
 <br/>
@@ -215,12 +252,15 @@ cord-player/
 │   ├── lyrics.py            # Synchronized LRC lyrics parser
 │   └── discord_rpc.py       # Discord Rich Presence IPC client
 ├── frontend/
-│   ├── index.html           # Core application markup
+│   ├── index.html           # Core application markup & PWA tags
+│   ├── manifest.json        # Mobile / Android PWA manifest
 │   ├── style.css            # Responsive Glassmorphism styles & animations
 │   └── app.js               # WebAudio graph, player state & DOM engine
 ├── assets/                  # Icons, SVGs, and visual presets
 ├── docs/screenshots/        # Repository showcase screenshots
-├── main.py                  # Standalone application launcher
+├── main.py                  # Standalone cross-platform launcher
+├── run.bat                  # 1-Click Windows launcher script
+├── run.sh                   # 1-Click macOS & Linux launcher script
 ├── requirements.txt         # Python package dependencies
 └── README.md                # Project documentation
 ```
@@ -235,6 +275,6 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 <div align="center">
 
-Crafted with ❤️ for music enthusiasts.
+Crafted with ❤️ by [Himanshu Joshi](https://github.com/himanshu-xyz-1)
 
 </div>
