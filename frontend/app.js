@@ -1917,17 +1917,46 @@ class CordPlayer {
 
   updateMediaSession(track) {
     if ('mediaSession' in navigator && track) {
+      const art = track.thumbnail || '/assets/avatars/music.svg';
       navigator.mediaSession.metadata = new MediaMetadata({
         title: track.title,
         artist: track.artist || 'Cord Player',
         album: track.album || 'Cord Music',
-        artwork: [{ src: track.thumbnail || '', sizes: '512x512', type: 'image/jpeg' }]
+        artwork: [
+          { src: art, sizes: '96x96', type: 'image/jpeg' },
+          { src: art, sizes: '128x128', type: 'image/jpeg' },
+          { src: art, sizes: '256x256', type: 'image/jpeg' },
+          { src: art, sizes: '512x512', type: 'image/jpeg' }
+        ]
       });
+
+      navigator.mediaSession.playbackState = this.isPlaying ? 'playing' : 'paused';
+
+      if (this.audio.duration && !isNaN(this.audio.duration)) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: Math.max(0, this.audio.duration),
+            playbackRate: this.audio.playbackRate || 1,
+            position: Math.min(this.audio.currentTime, this.audio.duration)
+          });
+        } catch (e) {}
+      }
 
       navigator.mediaSession.setActionHandler('play', () => this.togglePlay());
       navigator.mediaSession.setActionHandler('pause', () => this.togglePlay());
       navigator.mediaSession.setActionHandler('previoustrack', () => this.playPrevious());
       navigator.mediaSession.setActionHandler('nexttrack', () => this.playNext());
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.seekTime !== undefined && this.audio.duration) {
+          this.audio.currentTime = details.seekTime;
+        }
+      });
+      navigator.mediaSession.setActionHandler('seekbackward', () => {
+        this.audio.currentTime = Math.max(0, this.audio.currentTime - this.seekInterval);
+      });
+      navigator.mediaSession.setActionHandler('seekforward', () => {
+        this.audio.currentTime = Math.min(this.audio.duration, this.audio.currentTime + this.seekInterval);
+      });
     }
   }
 

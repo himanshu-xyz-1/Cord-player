@@ -7,6 +7,7 @@ on:
 
 jobs:
   build-apk:
+    name: Build Standalone Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -19,27 +20,19 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Install Node Dependencies
+      - name: Build with Gradle
         run: |
-          npm install
+          cd android
+          gradle wrapper --gradle-version 8.5
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
 
-      - name: Initialize Capacitor Android Project
-        run: |
-          npx cap add android || true
-          npx cap sync android
-
-      - name: Build Debug APK
-        run: |
-          cd android && chmod +x gradlew && ./gradlew assembleDebug
-
-      - name: Upload APK Artifact
+      - name: Upload APK Release Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CordPlayer-Android-APK
+          name: CordPlayer-v2.5.0-Android.apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
