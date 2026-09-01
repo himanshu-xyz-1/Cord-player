@@ -5,9 +5,12 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build-apk:
-    name: Build Standalone Android APK
+  build:
+    name: Build Cord Player APK
     runs-on: ubuntu-latest
 
     steps:
@@ -17,22 +20,45 @@ jobs:
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
 
-      - name: Build with Gradle
+      - name: Build Android APK
         run: |
           cd android
-          gradle wrapper --gradle-version 8.5
-          chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          gradle assembleDebug --stacktrace
 
-      - name: Upload APK Release Artifact
+      - name: Rename APK Output
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk CordPlayer.apk
+
+      - name: Upload APK as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CordPlayer.apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: CordPlayer-APK
+          path: CordPlayer.apk
           retention-days: 30
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v2.5.0
+          name: "Cord Player v2.5.0"
+          body: |
+            ## 🎵 Cord Player v2.5.0 (Android Release)
+            Download **`CordPlayer.apk`** below to install directly on your Android phone!
+            
+            ### ✨ Features:
+            - Continuous background & screen-off playback
+            - Lock-screen media notifications & progress scrubber
+            - Ad-free streaming & synced karaoke lyrics
+            - 10-band equalizer
+          files: CordPlayer.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
