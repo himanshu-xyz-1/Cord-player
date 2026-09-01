@@ -2,10 +2,11 @@
 
 # 🎵 Cord Player
 
-### *Next-Generation Cross-Platform Desktop & Mobile Music Streaming Engine*
+### *Desktop Music & Podcast Player with Synced Lyrics & Equalizer*
 
 [![Version](https://img.shields.io/badge/version-2.5.0-FF0D2E.svg?style=for-the-badge&logo=musicbrainz&logoColor=white)](https://github.com/himanshu-xyz-1/Cord-player)
-[![Download APK](https://img.shields.io/badge/Android%20APK-Download%20v2.5.0-3DDC84.svg?style=for-the-badge&logo=android&logoColor=white)](https://github.com/himanshu-xyz-1/Cord-player/releases/download/v2.5.0/CordPlayer.apk)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6.svg?style=for-the-badge&logo=windows&logoColor=white)](https://microsoft.com/windows)
 [![macOS](https://img.shields.io/badge/macOS-Intel%20%7C%20Apple%20Silicon-000000.svg?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com/macos)
 [![Linux](https://img.shields.io/badge/Linux-Wayland%20%7C%20X11-FCC624.svg?style=for-the-badge&logo=linux&logoColor=black)](https://archlinux.org)
@@ -13,57 +14,17 @@
 
 <br/>
 
-> **Cord Player** is a sleek, ultra-responsive, ad-free music & podcast player built with glassmorphism UI, real-time WebAudio processing, live synchronized karaoke lyrics, 10-band studio equalizer, offline downloading, and Discord Rich Presence. Runs natively on **Windows**, **macOS**, **Linux**, and **Android**.
+> **Cord Player** is a sleek, ultra-responsive, ad-free desktop music and podcast client built with glassmorphism UI, real-time WebAudio processing, live synchronized karaoke lyrics, 10-band equalizer, offline downloading, and Discord Rich Presence. Runs natively on **Linux**, **Windows**, and **macOS**.
 
 <br/>
 
-<a href="https://github.com/himanshu-xyz-1/Cord-player/releases/download/v2.5.0/CordPlayer.apk">
-  <img src="https://img.shields.io/badge/📱%20Download%20CordPlayer.apk-Direct%20APK%20(5.4MB)-3DDC84?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download Cord Player APK"/>
-</a>
-
-<br/><br/>
-
-[📱 Android App](#-android-mobile-app) • [✨ Features](#-key-features) • [📸 Screenshots](#-visual-showcase) • [⚡ Desktop Quick Start](#-desktop-quick-start) • [🎛️ Architecture](#-system-architecture) • [⌨️ Shortcuts](#️-keyboard-shortcuts)
+[✨ Features](#-key-features) • [📸 Screenshots](#-visual-showcase) • [⚡ Quick Start](#-quick-start) • [🎛️ Architecture](#-system-architecture) • [⌨️ Shortcuts](#️-keyboard-shortcuts)
 
 ---
 
 </div>
 
 <br/>
-
-## 📱 Android Mobile App
-
-Get the full standalone **Cord Player** mobile experience directly on your Android phone!
-
-<div align="center">
-
-<a href="https://github.com/himanshu-xyz-1/Cord-player/releases/download/v2.5.0/CordPlayer.apk">
-  <img src="https://img.shields.io/badge/📥%20Download%20CordPlayer.apk-v2.5.0-3DDC84?style=for-the-badge&logo=android&logoColor=white" height="45" alt="Download APK"/>
-</a>
-
-<br/>
-
-**[View all Android Releases](https://github.com/himanshu-xyz-1/Cord-player/releases)** • *File size: 5.44 MB • Android 7.0+ (Nougat to Android 14+)*
-
-</div>
-
-<br/>
-
-### 🌟 Android Highlights:
-- 🔒 **Continuous Screen-OFF Playback**: Integrated with Android's `MediaPlaybackService` and CPU WakeLock—music keeps playing uninterrupted when your phone screen turns off, when locked, or while using other apps.
-- 📱 **Lock-Screen Media Controls**: Full live scrubber seek bar, high-resolution album artwork, track details, and quick play/pause/skip buttons in your notification shade and lock screen.
-- 🎧 **Bluetooth & Headphone Support**: Full hardware media button integration (AirPods, Galaxy Buds, wired headsets, and smartwatches).
-- 🎚️ **Hardware Equalizer & Synced Karaoke Lyrics**: Native real-time WebAudio engine with syllable-accurate auto-scrolling lyrics right on mobile.
-- 🚀 **100% Standalone**: Installs directly from the `.apk` without needing a computer running.
-
-#### 📲 How to Install:
-1. Download **[CordPlayer.apk](https://github.com/himanshu-xyz-1/Cord-player/releases/download/v2.5.0/CordPlayer.apk)** directly on your Android device.
-2. Tap the downloaded `.apk` file and grant *"Install from this source"* if prompted.
-3. Open **Cord Player** from your app drawer and enjoy unlimited ad-free music!
-
-<br/>
-
----
 
 ## 📸 Visual Showcase
 
@@ -99,10 +60,10 @@ Get the full standalone **Cord Player** mobile experience directly on your Andro
 <table>
   <tr>
     <td width="50%">
-      <h3>🚀 Blazing Fast Ad-Free Streaming</h3>
+      <h3>🚀 Fast Ad-Free Streaming</h3>
       <ul>
-        <li><b>Sub-second audio loading</b> via multi-client stream resolution (<code>android</code>, <code>ios</code>, <code>web</code>).</li>
-        <li>100% ad-free playback with adaptive bitrate streaming (up to 320kbps).</li>
+        <li>Sub-second audio loading with adaptive bitrate streaming (up to 320kbps).</li>
+        <li>100% ad-free playback without telemetry or tracking.</li>
         <li>Continuous uninterrupted playback with Smart Radio queueing.</li>
       </ul>
     </td>
@@ -146,7 +107,7 @@ Get the full standalone **Cord Player** mobile experience directly on your Andro
       <h3>🎮 Discord Rich Presence & MediaSession</h3>
       <ul>
         <li>Broadcast current track, artist, album art, and live elapsed timer to Discord.</li>
-        <li>Native OS MediaSession integration (play/pause/skip via media keys).</li>
+        <li>Native desktop OS MediaSession integration (play/pause/skip via media keys).</li>
         <li>Multi-device output sink selector for Bluetooth headphones & DACs.</li>
       </ul>
     </td>
@@ -157,7 +118,7 @@ Get the full standalone **Cord Player** mobile experience directly on your Andro
 
 ---
 
-## ⚡ Desktop Quick Start
+## ⚡ Quick Start
 
 ### 🪟 Windows (10 / 11)
 
@@ -166,12 +127,12 @@ Get the full standalone **Cord Player** mobile experience directly on your Andro
    git clone https://github.com/himanshu-xyz-1/Cord-player.git
    cd Cord-player
    ```
-2. Double-click **`run.bat`** (or execute via Command Prompt / PowerShell):
+2. Double-click **`run.bat`** (or execute via Command Prompt):
    ```cmd
    pip install -r requirements.txt
    python main.py
    ```
-> **Note**: Cord Player automatically detects **Microsoft Edge** or **Google Chrome** and launches as a native borderless desktop app with full WebAudio acceleration.
+> **Note**: Cord Player automatically detects **Microsoft Edge** or **Google Chrome** and launches as a native borderless desktop app with full hardware acceleration.
 
 <br/>
 
@@ -208,7 +169,7 @@ python3 main.py
 
 ```mermaid
 flowchart TD
-    subgraph UI ["🖥️ Cross-Platform Frontend (HTML5 / Glassmorphism CSS / JS)"]
+    subgraph UI ["🖥️ Desktop Frontend (HTML5 / Glassmorphism CSS / JS)"]
         UI_Home["🏠 Home (Music & Podcasts)"]
         UI_Search["🔍 Live Search & Suggestions"]
         UI_Cinema["🎬 Cinema Mode & Synced Lyrics"]
@@ -265,17 +226,13 @@ flowchart TD
 
 ```
 cord-player/
-├── android/                 # Native Android Studio Project
-│   ├── app/src/main/        # AndroidManifest, Java Services & XML layouts
-│   └── app/build.gradle     # Android Gradle build & dependencies
 ├── backend/
 │   ├── main.py              # FastAPI application & REST routing
 │   ├── ytmusic.py           # Multi-endpoint audio extraction & search
 │   ├── lyrics.py            # Synchronized LRC lyrics parser
 │   └── discord_rpc.py       # Discord Rich Presence IPC client
 ├── frontend/
-│   ├── index.html           # Core application markup & PWA tags
-│   ├── manifest.json        # Mobile / Android PWA manifest
+│   ├── index.html           # Core application markup
 │   ├── style.css            # Responsive Glassmorphism styles & animations
 │   └── app.js               # WebAudio graph, player state & DOM engine
 ├── assets/                  # Icons, SVGs, and visual presets

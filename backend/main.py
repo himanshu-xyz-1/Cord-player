@@ -315,7 +315,3 @@ if FRONTEND_DIR.exists():
     @app.get("/")
     async def serve_root():
         return FileResponse(str(FRONTEND_DIR / "index.html"))
-
-    @app.get("/manifest.json")
-    async def serve_manifest():
-        return FileResponse(str(FRONTEND_DIR / "manifest.json"))
