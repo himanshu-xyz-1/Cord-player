@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cord Player</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0" />
+</head>
+<body class="theme-red-white">
+  <div id="app" class="app-layout">
+    <!-- Left Clean & Music-Focused Sidebar -->
+    <aside class="sidebar">
+      <!-- Top Brand Logo + Settings Gear -->
+      <div class="sidebar-header">
+        <div class="brand" id="brand-home-btn" title="Home / Made For You">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z" fill="#FFFFFF"/>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1>Cord</h1>
+            <span>PLAYER</span>
+          </div>
+        </div>
+        <button id="sidebar-settings-btn" class="gear-btn" title="Settings">
+          <span class="material-symbols-rounded">settings</span>
+        </button>
+      </div>
+
+      <!-- Main Navigation (ONLY 3 Tabs: 1. Home, 2. Search, 3. Library) -->
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="home">
+          <span class="material-symbols-rounded">home</span>
+          <span>Home</span>
+        </button>
+        <button class="nav-item" data-tab="search">
+          <span class="material-symbols-rounded">search</span>
+          <span>Search</span>
+        </button>
+        <button class="nav-item" data-tab="library">
+          <span class="material-symbols-rounded">library_music</span>
+          <span>Library</span>
+        </button>
+      </nav>
+
+      <!-- Divider -->
+      <div class="sidebar-divider"></div>
+
+      <!-- Pinned Artists Section -->
+      <div class="pinned-artists-section">
+        <div class="pinned-header">
+          <span>PINNED ARTISTS</span>
+          <button id="add-pinned-artist-btn" class="icon-btn-tiny" title="Search to Pin Artists">
+            <span class="material-symbols-rounded">add</span>
+          </button>
+        </div>
+        <div class="pinned-artists-list" id="sidebar-pinned-artists-list">
+          <!-- Dynamically populated from pinned artists state -->
+        </div>
+      </div>
+
+      <!-- Sidebar Mini Visualizer Box -->
+      <div class="sidebar-visualizer-box" id="side-viz-container">
+        <div class="visualizer-header">
+          <span>Frequency</span>
+          <span class="material-symbols-rounded viz-sparkle">graphic_eq</span>
+        </div>
+        <canvas id="side-visualizer"></canvas>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Search & Quick Actions Header -->
+      <header class="top-header">
+        <div class="search-bar-container" id="top-search-box">
+          <span class="material-symbols-rounded search-icon">search</span>
+          <input type="text" id="global-search-input" placeholder="Search songs, artists, albums, or playlists..." autocomplete="off">
+          <button id="clear-search-btn" class="icon-btn" style="display: none;">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+          
+          <!-- Live Search Suggestions Popover -->
+          <div id="search-suggestions-dropdown" class="suggestions-popover" style="display: none;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button id="theme-mode-toggle" class="header-pill-btn" title="Toggle Dark/Light Mode">
+            <span class="material-symbols-rounded" id="theme-mode-icon">dark_mode</span>
+            <span id="theme-mode-label">Dark</span>
+          </button>
+          <button id="header-cinema-btn" class="icon-btn" title="Wide-Screen Cinema Mode">
+            <span class="material-symbols-rounded">fullscreen</span>
+          </button>
+          <button id="header-settings-btn" class="icon-btn" title="Settings">
+            <span class="material-symbols-rounded">settings</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dynamic Views Container -->
+      <section class="view-container">
+        <!-- 1. SEARCH VIEW -->
+        <div id="view-search" class="tab-view">
+          
+          <!-- Search Results Header (Shown when query is active) -->
+          <div class="search-filter-header" id="search-filter-header" style="display: none; margin-bottom: 20px;">
+            <div class="section-header" style="margin-bottom: 12px;">
+              <h3 id="search-title">Search Results</h3>
+            </div>
+            <div class="search-filters">
+              <button class="filter-chip active" data-filter="all">All</button>
+              <button class="filter-chip" data-filter="songs">Songs</button>
+              <button class="filter-chip" data-filter="artists">Artists</button>
+              <button class="filter-chip" data-filter="albums">Albums</button>
+              <button class="filter-chip" data-filter="playlists">Playlists</button>
+            </div>
+          </div>
+
+          <!-- A. INITIAL / IDLE STATE (When search bar is empty) -->
+          <div id="search-idle-state" class="search-idle-container">
+            
+            <!-- Recent Searches Section -->
+            <div id="recent-searches-section" class="search-sub-section" style="display: none; margin-bottom: 28px;">
+              <div class="section-header">
+                <div class="header-title-box">
+                  <h3>Recent Searches</h3>
+                  <span class="subtitle">Quickly jump back to your recent searches</span>
+                </div>
+                <button id="clear-all-recent-searches-btn" class="btn-text-action">Clear all</button>
+              </div>
+              <div id="recent-searches-chips" class="recent-chips-wrap">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Explore Music Category Cards -->
+            <div class="search-sub-section" style="margin-bottom: 32px;">
+              <div class="section-header">
+                <div class="header-title-box">
+                  <h3>Explore Music</h3>
+                  <span class="subtitle">Browse by category</span>
+                </div>
+              </div>
+              <div class="explore-categories-grid">
+                <div class="explore-cat-card" data-cat="songs">
+                  <div class="cat-icon-badge" style="background: linear-gradient(135deg, #FF0D2E, #FF5252);">
+                    <span class="material-symbols-rounded">music_note</span>
+                  </div>
+                  <div class="cat-meta">
+                    <h4>Songs</h4>
+                    <span>Trending & Popular Hits</span>
+                  </div>
+                </div>
+
+                <div class="explore-cat-card" data-cat="artists">
+                  <div class="cat-icon-badge" style="background: linear-gradient(135deg, #7C4DFF, #B388FF);">
+                    <span class="material-symbols-rounded">person</span>
+                  </div>
+                  <div class="cat-meta">
+                    <h4>Artists</h4>
+                    <span>Top Creators & Bands</span>
+                  </div>
+                </div>
+
+                <div class="explore-cat-card" data-cat="albums">
+                  <div class="cat-icon-badge" style="background: linear-gradient(135deg, #00B0FF, #80D8FF);">
+                    <span class="material-symbols-rounded">album</span>
+                  </div>
+                  <div class="cat-meta">
+                    <h4>Albums</h4>
+                    <span>Full Records & EPs</span>
+                  </div>
+                </div>
+
+                <div class="explore-cat-card" data-cat="playlists">
+                  <div class="cat-icon-badge" style="background: linear-gradient(135deg, #00E676, #B9F6CA);">
+                    <span class="material-symbols-rounded">queue_music</span>
+                  </div>
+                  <div class="cat-meta">
+                    <h4>Playlists</h4>
+                    <span>Curated Mixes & Moods</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Trending & Popular Music (6-8 Real Song Cards) -->
+            <div class="search-sub-section">
+              <div class="section-header">
+                <div class="header-title-box">
+                  <h3>Trending & Popular Music</h3>
+                  <span class="subtitle">Top chart toppers right now</span>
+                </div>
+              </div>
+              <div id="search-trending-grid" class="cards-grid">
+                <!-- Dynamically populated from actual API -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- B. ACTIVE SEARCH RESULTS CONTAINER -->
+          <div id="search-active-results" class="search-results-container" style="display: none;">
+            
+            <!-- All Filter Categorized Sections -->
+            <div id="search-all-sections">
+              <!-- Top Result Hero Match -->
+              <div id="search-top-result-wrap" class="search-top-result-box" style="display: none; margin-bottom: 28px;">
+                <!-- Populated dynamically -->
+              </div>
+
+              <!-- Top Songs in Search -->
+              <div id="search-songs-section" class="search-result-group" style="display: none; margin-bottom: 28px;">
+                <div class="section-header">
+                  <h3>Songs</h3>
+                </div>
+                <div id="search-songs-list" class="artist-songs-table"></div>
+              </div>
+
+              <!-- Artists in Search -->
+              <div id="search-artists-section" class="search-result-group" style="display: none; margin-bottom: 28px;">
+                <div class="section-header">
+                  <h3>Artists</h3>
+                </div>
+                <div id="search-artists-grid" class="cards-grid"></div>
+              </div>
+
+              <!-- Albums in Search -->
+              <div id="search-albums-section" class="search-result-group" style="display: none; margin-bottom: 28px;">
+                <div class="section-header">
+                  <h3>Albums</h3>
+                </div>
+                <div id="search-albums-grid" class="cards-grid"></div>
+              </div>
+
+              <!-- Playlists in Search -->
+              <div id="search-playlists-section" class="search-result-group" style="display: none; margin-bottom: 28px;">
+                <div class="section-header">
+                  <h3>Playlists</h3>
+                </div>
+                <div id="search-playlists-grid" class="cards-grid"></div>
+              </div>
+            </div>
+
+            <!-- Specific Category Filter Grid (when Songs / Artists / Albums / Playlists is active) -->
+            <div id="search-single-cat-grid" class="cards-grid" style="display: none;"></div>
+
+            <!-- No Results State -->
+            <div id="search-no-results" class="empty-state" style="display: none; padding: 60px 20px;">
+              <span class="material-symbols-rounded" style="font-size: 54px; color: var(--text-dim);">search_off</span>
+              <h3 style="font-size: 1.4rem; margin-top: 12px; font-weight: 800;">No music found</h3>
+              <p style="color: var(--text-muted); margin-top: 6px;">Try a different song, artist, album, or playlist.</p>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- 1. HOME VIEW (Streaming Home Experience) -->
+        <div id="view-home" class="tab-view active">
+          
+          <!-- Home Filter Pills (Music / Podcasts) -->
+          <div class="home-subnav-row" style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+            <button class="home-tab-pill active" data-home-tab="music">
+              <span class="material-symbols-rounded">music_note</span>
+              <span>Music</span>
+            </button>
+            <button class="home-tab-pill" data-home-tab="podcasts">
+              <span class="material-symbols-rounded">podcasts</span>
+              <span>Podcasts</span>
+            </button>
+          </div>
+
+          <!-- A. MUSIC SECTION (Default) -->
+          <div id="home-music-section" class="home-tab-panel active">
+            <!-- Hero Banner -->
+            <div class="hero-banner">
+              <div class="hero-content">
+                <span class="hero-tag">MUSIC</span>
+                <h2>Your Daily Mix & Recommendations</h2>
+                <p>Tailored music and trending tracks with ad-free streaming and live karaoke lyrics.</p>
+                <div class="hero-btn-row">
+                  <button id="play-recommendations-btn" class="btn-primary-pill">
+                    <span class="material-symbols-rounded">play_arrow</span>
+                    <span>Play Mix</span>
+                    <span class="pill-circle-icon"><span class="material-symbols-rounded">arrow_forward</span></span>
+                  </button>
+                  <button id="refresh-recom-btn" class="btn-white-pill">
+                    <span class="material-symbols-rounded">refresh</span>
+                    <span>Refresh Recommendations</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recommended For You Section -->
+            <div class="section-header">
+              <div class="header-title-box">
+                <h3>Recommended Songs</h3>
+                <span class="subtitle">Curated based on your listening taste</span>
+              </div>
+            </div>
+            <div id="made-for-you-grid" class="cards-grid">
+              <!-- Dynamically populated -->
+            </div>
+
+            <!-- Trending & Top Charts Section -->
+            <div class="section-header" style="margin-top: 36px;">
+              <div class="header-title-box">
+                <h3>Global Trending Tracks</h3>
+                <span class="subtitle">Top worldwide charts & viral hits</span>
+              </div>
+            </div>
+            <div id="trending-grid" class="cards-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- B. PODCASTS SECTION -->
+          <div id="home-podcasts-section" class="home-tab-panel" style="display: none;">
+            <!-- Podcast Hero Banner -->
+            <div class="hero-banner">
+              <div class="hero-content">
+                <span class="hero-tag">PODCASTS & SHOWS</span>
+                <h2>Discover Audio Stories, Talks & Shows</h2>
+                <p>Listen to popular podcast episodes, interviews, tech talks, and stories.</p>
+                <div class="hero-btn-row">
+                  <button id="play-featured-podcast-btn" class="btn-primary-pill">
+                    <span class="material-symbols-rounded">play_arrow</span>
+                    <span>Play Top Episode</span>
+                    <span class="pill-circle-icon"><span class="material-symbols-rounded">arrow_forward</span></span>
+                  </button>
+                  <button id="refresh-podcasts-btn" class="btn-white-pill">
+                    <span class="material-symbols-rounded">refresh</span>
+                    <span>Refresh Podcasts</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Popular Episodes Section -->
+            <div class="section-header">
+              <div class="header-title-box">
+                <h3>Popular Podcast Episodes</h3>
+                <span class="subtitle">Trending talk shows, tech, culture & stories</span>
+              </div>
+            </div>
+            <div id="podcast-episodes-grid" class="cards-grid">
+              <!-- Dynamically populated -->
+            </div>
+
+            <!-- Top Shows Section -->
+            <div class="section-header" style="margin-top: 36px;">
+              <div class="header-title-box">
+                <h3>Top Shows & Creators</h3>
+                <span class="subtitle">Featured podcast series</span>
+              </div>
+            </div>
+            <div id="podcast-shows-grid" class="cards-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 3. LIBRARY VIEW (Parent Hub) -->
+        <div id="view-library" class="tab-view">
+          <div class="library-header-nav">
+            <div class="header-title-box">
+              <h2>Your Music Library</h2>
+              <span class="subtitle">Your saved favorites, offline downloads, playlists, and history</span>
+            </div>
+            <div class="library-subnav-pills">
+              <button class="lib-pill active" data-sub="favorites">
+                <span class="material-symbols-rounded">favorite</span>
+                <span>Favorites</span>
+              </button>
+              <button class="lib-pill" data-sub="downloads">
+                <span class="material-symbols-rounded">download_for_offline</span>
+                <span>Downloads</span>
+              </button>
+              <button class="lib-pill" data-sub="recent">
+                <span class="material-symbols-rounded">history</span>
+                <span>Recently Played</span>
+              </button>
+              <button class="lib-pill" data-sub="artists">
+                <span class="material-symbols-rounded">person</span>
+                <span>Saved Artists</span>
+              </button>
+              <button class="lib-pill" data-sub="albums">
+                <span class="material-symbols-rounded">album</span>
+                <span>Saved Albums</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Library Sub-Sections -->
+          <div class="library-sub-content">
+            <!-- Subsection: Favorites -->
+            <div id="lib-sec-favorites" class="lib-panel active">
+              <div class="section-header">
+                <div class="header-title-box">
+                  <h3>Favorite Tracks</h3>
+                  <span class="subtitle">Songs you've liked</span>
+                </div>
+                <button id="play-favorites-btn" class="btn-primary-pill">
+                  <span class="material-symbols-rounded">play_arrow</span>
+                  <span>Play All</span>
+                </button>
+              </div>
+              <div id="favorites-grid" class="cards-grid"></div>
+            </div>
+
+            <!-- Subsection: Downloads -->
+            <div id="lib-sec-downloads" class="lib-panel">
+              <div class="section-header">
+                <div class="header-title-box">
+                  <h3>Offline Downloads</h3>
+                  <span class="subtitle">Locally stored 320kbps MP3 files in ~/Music/Cord/</span>
+                </div>
+                <button id="play-downloads-btn" class="btn-primary-pill">
+                  <span class="material-symbols-rounded">play_arrow</span>
+                  <span>Play All Offline</span>
+                </button>
+              </div>
+              <div id="downloads-grid" class="cards-grid"></div>
+            </div>
+
+            <!-- Subsection: Recently Played -->
+            <div id="lib-sec-recent" class="lib-panel">
+              <div class="section-header">
+                <div class="header-title-box">
+                  <h3>Recently Played</h3>
+                  <span class="subtitle">Your listening history</span>
+                </div>
+                <button id="clear-history-lib-btn" class="btn-white-pill">Clear History</button>
+              </div>
+              <div id="recent-history-grid" class="cards-grid"></div>
+            </div>
+
+            <!-- Subsection: Saved Artists -->
+            <div id="lib-sec-artists" class="lib-panel">
+              <div class="section-header">
+                <div class="header-title-box">
+                  <h3>Saved & Pinned Artists</h3>
+                  <span class="subtitle">Quick access to your favorite creators</span>
+                </div>
+              </div>
+              <div id="saved-artists-grid" class="cards-grid"></div>
+            </div>
+
+            <!-- Subsection: Saved Albums -->
+            <div id="lib-sec-albums" class="lib-panel">
+              <div class="section-header">
+                <div class="header-title-box">
+                  <h3>Saved Albums</h3>
+                  <span class="subtitle">Albums in your library</span>
+                </div>
+              </div>
+              <div id="saved-albums-grid" class="cards-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. ARTIST PROFILE VIEW (Full-Featured Streaming Profile) -->
+        <div id="view-artist" class="tab-view">
+          <!-- Artist Hero Header -->
+          <div class="artist-hero-card">
+            <div class="artist-avatar-wrap">
+              <img id="artist-profile-avatar" src="/assets/avatars/default.svg" alt="Artist">
+            </div>
+            <div class="artist-meta-wrap">
+              <span class="artist-badge">VERIFIED ARTIST</span>
+              <h1 id="artist-profile-name">Artist Name</h1>
+              <p id="artist-profile-desc" class="artist-bio"></p>
+              <div class="artist-btn-row">
+                <button id="artist-play-top-btn" class="btn-primary-pill">
+                  <span class="material-symbols-rounded">play_arrow</span>
+                  <span>Play Top Tracks</span>
+                </button>
+                <button id="artist-pin-toggle-btn" class="btn-white-pill">
+                  <span class="material-symbols-rounded" id="artist-pin-icon">push_pin</span>
+                  <span id="artist-pin-label">Pin Artist</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Latest Releases Section (Prominent Near Top) -->
+          <div class="section-header" style="margin-top: 32px;">
+            <div class="header-title-box">
+              <h3>Latest Releases</h3>
+              <span class="subtitle">Newest singles, EPs, and albums sorted by release date</span>
+            </div>
+          </div>
+          <div id="artist-latest-releases-grid" class="cards-grid">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Top / Popular Songs -->
+          <div class="section-header" style="margin-top: 36px;">
+            <div class="header-title-box">
+              <h3>Popular Songs</h3>
+              <span class="subtitle">Most played tracks</span>
+            </div>
+          </div>
+          <div id="artist-top-songs-list" class="artist-songs-table">
+            <!-- Dynamically populated track list -->
+          </div>
+
+          <!-- Albums Section -->
+          <div class="section-header" style="margin-top: 36px;">
+            <div class="header-title-box">
+              <h3>Albums</h3>
+              <span class="subtitle">Full-length discography</span>
+            </div>
+          </div>
+          <div id="artist-albums-grid" class="cards-grid">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Singles & EPs Section -->
+          <div class="section-header" style="margin-top: 36px;">
+            <div class="header-title-box">
+              <h3>Singles & EPs</h3>
+              <span class="subtitle">Singles, remixes, and EP releases</span>
+            </div>
+          </div>
+          <div id="artist-singles-grid" class="cards-grid">
+            <!-- Dynamically populated -->
+          </div>
+
+          <!-- Related Artists Section -->
+          <div class="section-header" style="margin-top: 36px;">
+            <div class="header-title-box">
+              <h3>Fans Also Like</h3>
+              <span class="subtitle">Similar and related creators</span>
+            </div>
+          </div>
+          <div id="artist-related-grid" class="cards-grid">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- 5. LYRICS VIEW (Opened via miniplayer shortcut) -->
+        <div id="view-lyrics" class="tab-view">
+          <div class="lyrics-container">
+            <div class="lyrics-meta">
+              <img id="lyrics-thumb" src="/assets/avatars/music.svg" alt="Album Art">
+              <div>
+                <h2 id="lyrics-title">Select a track</h2>
+                <h4 id="lyrics-artist">-</h4>
+              </div>
+            </div>
+            <div id="lyrics-scroll" class="lyrics-content">
+              <p class="lyrics-placeholder">Play a song to view live synchronized karaoke lyrics.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. EQUALIZER VIEW (Opened via miniplayer shortcut or settings) -->
+        <div id="view-equalizer" class="tab-view">
+          <div class="section-header">
+            <div class="header-title-box">
+              <h3>Pro Audio Equalizer & Volume Booster</h3>
+              <span class="subtitle">Customize frequencies and boost audio volume up to 250%</span>
+            </div>
+            <div class="eq-preset-container">
+              <label>Preset:</label>
+              <select id="eq-preset-select" class="theme-select">
+                <option value="flat">Flat (Default)</option>
+                <option value="bass_boost">Bass Boost (Heavy Punch)</option>
+                <option value="vocal">Vocal Booster (Crisp Clarity)</option>
+                <option value="rock">Rock / Metal</option>
+                <option value="pop">Pop / Dance</option>
+                <option value="electronic">EDM / Electronic</option>
+                <option value="classical">Classical / Acoustic</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card-box">
+            <!-- Volume Booster Slider (Up to 250%) -->
+            <div class="booster-row">
+              <div class="booster-label">
+                <span class="material-symbols-rounded booster-icon">volume_up</span>
+                <div>
+                  <div style="font-weight: 700;">Hardware Volume Booster</div>
+                  <div style="font-size: 0.8rem; color: var(--text-muted);">Boost output past 100% volume</div>
+                </div>
+                <span id="booster-val-text" class="booster-badge">100%</span>
+              </div>
+              <input type="range" id="booster-slider" min="1.0" max="2.5" step="0.05" value="1.0">
+            </div>
+
+            <!-- 10 Band Equalizer Sliders -->
+            <div class="eq-sliders-grid">
+              <div class="eq-col">
+                <span class="eq-val" id="eq-val-0">0dB</span>
+                <input type="range" class="eq-slider" orient="vertical" id="eq-band-0" min="-12" max="12" step="1" value="0">
+                <span class="eq-freq">60Hz</span>
+              </div>
+              <div class="eq-col">
+                <span class="eq-val" id="eq-val-1">0dB</span>
+                <input type="range" class="eq-slider" orient="vertical" id="eq-band-1" min="-12" max="12" step="1" value="0">
+                <span class="eq-freq">170Hz</span>
+              </div>
+              <div class="eq-col">
+                <span class="eq-val" id="eq-val-2">0dB</span>
+                <input type="range" class="eq-slider" orient="vertical" id="eq-band-2" min="-12" max="12" step="1" value="0">
+                <span class="eq-freq">310Hz</span>
+              </div>
+              <div class="eq-col">
+                <span class="eq-val" id="eq-val-3">0dB</span>
+                <input type="range" class="eq-slider" orient="vertical" id="eq-band-3" min="-12" max="12" step="1" value="0">
+                <span class="eq-freq">600Hz</span>
+              </div>
+              <div class="eq-col">
+                <span class="eq-val" id="eq-val-4">0dB</span>
+                <input type="range" class="eq-slider" orient="vertical" id="eq-band-4" min="-12" max="12" step="1" value="0">
+                <span class="eq-freq">1kHz</span>
+              </div>
+              <div class="eq-col">
+                <span class="eq-val" id="eq-val-5">0dB</span>
+                <input type="range" class="eq-slider" orient="vertical" id="eq-band-5" min="-12" max="12" step="1" value="0">
+                <span class="eq-freq">3kHz</span>
+              </div>
+              <div class="eq-col">
+                <span class="eq-val" id="eq-val-6">0dB</span>
+                <input type="range" class="eq-slider" orient="vertical" id="eq-band-6" min="-12" max="12" step="1" value="0">
+                <span class="eq-freq">6kHz</span>
+              </div>
+              <div class="eq-col">
+                <span class="eq-val" id="eq-val-7">0dB</span>
+                <input type="range" class="eq-slider" orient="vertical" id="eq-band-7" min="-12" max="12" step="1" value="0">
+                <span class="eq-freq">12kHz</span>
+              </div>
+              <div class="eq-col">
+                <span class="eq-val" id="eq-val-8">0dB</span>
+                <input type="range" class="eq-slider" orient="vertical" id="eq-band-8" min="-12" max="12" step="1" value="0">
+                <span class="eq-freq">14kHz</span>
+              </div>
+              <div class="eq-col">
+                <span class="eq-val" id="eq-val-9">0dB</span>
+                <input type="range" class="eq-slider" orient="vertical" id="eq-band-9" min="-12" max="12" step="1" value="0">
+                <span class="eq-freq">16kHz</span>
+              </div>
+            </div>
+            <div class="eq-actions">
+              <button id="reset-eq-btn" class="btn-white-pill">Reset Equalizer</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. QUEUE VIEW -->
+        <div id="view-queue" class="tab-view">
+          <div class="section-header">
+            <h3>Up Next & Queue</h3>
+            <div class="queue-actions">
+              <button id="clear-queue-btn" class="btn-white-pill">Clear Queue</button>
+            </div>
+          </div>
+          <div id="queue-list" class="queue-container">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- 8. SETTINGS VIEW -->
+        <div id="view-settings" class="tab-view">
+          <div class="settings-container-layout">
+            <!-- Sub-Sidebar -->
+            <div class="settings-sub-sidebar">
+              <div class="settings-category-header">SETTINGS</div>
+              <button class="settings-nav-btn active" data-sec="appearance">
+                <span class="material-symbols-rounded">palette</span>
+                <span>Appearance</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="playback">
+                <span class="material-symbols-rounded">play_circle</span>
+                <span>Playback</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="audio">
+                <span class="material-symbols-rounded">volume_up</span>
+                <span>Audio</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="downloads">
+                <span class="material-symbols-rounded">download_for_offline</span>
+                <span>Downloads</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="library">
+                <span class="material-symbols-rounded">library_music</span>
+                <span>Library</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="artwork">
+                <span class="material-symbols-rounded">image</span>
+                <span>Artwork & Metadata</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="lyrics">
+                <span class="material-symbols-rounded">lyrics</span>
+                <span>Lyrics</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="notifications">
+                <span class="material-symbols-rounded">notifications</span>
+                <span>Notifications</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="interface">
+                <span class="material-symbols-rounded">desktop_windows</span>
+                <span>Interface</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="keyboard">
+                <span class="material-symbols-rounded">keyboard</span>
+                <span>Keyboard & Controls</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="ytmusic">
+                <span class="material-symbols-rounded">public</span>
+                <span>Music Engine</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="discord">
+                <span class="material-symbols-rounded">sports_esports</span>
+                <span>Discord</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="advanced">
+                <span class="material-symbols-rounded">tune</span>
+                <span>Advanced</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="storage">
+                <span class="material-symbols-rounded">storage</span>
+                <span>Storage</span>
+              </button>
+              <button class="settings-nav-btn" data-sec="about">
+                <span class="material-symbols-rounded">info</span>
+                <span>About</span>
+              </button>
+            </div>
+
+            <!-- Content Panels -->
+            <div class="settings-content-pane">
+              <!-- 🎨 APPEARANCE -->
+              <div id="sec-appearance" class="settings-panel active">
+                <h3 class="panel-title">Appearance & Theming</h3>
+                
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">App Theme Mode</div>
+                    <div class="setting-desc">Choose between Light, Dark, or System Sync</div>
+                  </div>
+                  <select id="cfg-theme-mode" class="theme-select">
+                    <option value="light">Light Mode (Red & White)</option>
+                    <option value="dark">Dark Mode (Stealth)</option>
+                    <option value="system">System Default</option>
+                  </select>
+                </div>
+
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Color Theme Presets</div>
+                    <div class="setting-desc">Select predefined primary accent palette</div>
+                  </div>
+                  <div class="theme-presets-grid">
+                    <button class="theme-card active" data-theme="red-white">
+                      <div class="color-preview" style="background: linear-gradient(135deg, #FF0D2E, #FFFFFF);"></div>
+                      <span>Bright Red & White</span>
+                    </button>
+                    <button class="theme-card" data-theme="black-white">
+                      <div class="color-preview" style="background: linear-gradient(135deg, #111111, #FFFFFF);"></div>
+                      <span>Monochrome B&W</span>
+                    </button>
+                    <button class="theme-card" data-theme="violet-white">
+                      <div class="color-preview" style="background: linear-gradient(135deg, #7C4DFF, #FFFFFF);"></div>
+                      <span>Neon Violet</span>
+                    </button>
+                    <button class="theme-card" data-theme="cyan-white">
+                      <div class="color-preview" style="background: linear-gradient(135deg, #00B0FF, #FFFFFF);"></div>
+                      <span>Cyberpunk Cyan</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Custom Gradient & Accent Studio -->
+                <div class="custom-studio-card">
+                  <div class="custom-studio-header">
+                    <div>
+                      <div class="setting-name">Custom Gradient & Accent Studio</div>
+                      <div class="setting-desc">Choose any color palette or enter custom Hex codes with live gradient angle.</div>
+                    </div>
+                    <button id="apply-custom-theme-btn" class="btn-primary-pill">Apply Custom Theme</button>
+                  </div>
+
+                  <div class="custom-studio-body">
+                    <!-- Left: Live Preview Card & Angle -->
+                    <div class="studio-preview-col">
+                      <div class="custom-live-preview-box" id="custom-theme-preview">
+                        <span class="preview-text">Live Gradient Preview</span>
+                      </div>
+                      <div class="studio-angle-control">
+                        <label>Gradient Angle:</label>
+                        <input type="range" id="custom-gradient-angle" min="0" max="360" value="135" class="angle-range-slider">
+                        <span id="angle-val-text" class="angle-badge">135°</span>
+                      </div>
+                      <div class="studio-gradient-toggle-row">
+                        <label for="custom-gradient-toggle">Enable Gradient</label>
+                        <input type="checkbox" id="custom-gradient-toggle" class="switch-toggle" checked>
+                      </div>
+                    </div>
+
+                    <!-- Right: In-App Palette Swatches & Hex Inputs -->
+                    <div class="studio-colors-col">
+                      <div class="studio-color-field">
+                        <div class="field-title-row">
+                          <label>Primary Color</label>
+                          <div class="hex-input-pill">
+                            <span class="swatch-indicator" id="primary-indicator" style="background: #FF0D2E;"></span>
+                            <input type="text" id="hex-text-1" value="#FF0D2E" class="hex-text-input" maxlength="7">
+                          </div>
+                        </div>
+                        <div class="studio-swatches-grid" id="primary-swatches-grid"></div>
+                      </div>
+
+                      <div class="studio-color-field" style="margin-top: 12px;">
+                        <div class="field-title-row">
+                          <label>Secondary Color</label>
+                          <div class="hex-input-pill">
+                            <span class="swatch-indicator" id="secondary-indicator" style="background: #FFFFFF;"></span>
+                            <input type="text" id="hex-text-2" value="#FFFFFF" class="hex-text-input" maxlength="7">
+                          </div>
+                        </div>
+                        <div class="studio-swatches-grid" id="secondary-swatches-grid"></div>
+                      </div>
+
+                      <input type="hidden" id="custom-color-1" value="#FF0D2E">
+                      <input type="hidden" id="custom-color-2" value="#FFFFFF">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Background Style</div>
+                    <div class="setting-desc">Dynamic glowing aura or solid slate flat background</div>
+                  </div>
+                  <select id="cfg-bg-style" class="theme-select">
+                    <option value="dynamic">Dynamic Aura (Default)</option>
+                    <option value="solid">Solid Background</option>
+                  </select>
+                </div>
+
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Corner Border Radius</div>
+                    <div class="setting-desc">Card & button curvature style</div>
+                  </div>
+                  <select id="cfg-border-radius" class="theme-select">
+                    <option value="pill">Pill & Smooth (28px - Default)</option>
+                    <option value="standard">Standard Modern (16px)</option>
+                    <option value="sharp">Sharp Geometric (6px)</option>
+                  </select>
+                </div>
+
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Audio Visualizer</div>
+                    <div class="setting-desc">Show live audio frequency visualizer in sidebar</div>
+                  </div>
+                  <input type="checkbox" id="cfg-viz-toggle" checked class="switch-toggle">
+                </div>
+              </div>
+
+              <!-- 🎵 PLAYBACK -->
+              <div id="sec-playback" class="settings-panel">
+                <h3 class="panel-title">Playback Options</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Autoplay & Smart Queue</div>
+                    <div class="setting-desc">Automatically queue related songs when queue finishes</div>
+                  </div>
+                  <input type="checkbox" id="cfg-autoplay" checked class="switch-toggle">
+                </div>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Seek Interval</div>
+                    <div class="setting-desc">Number of seconds to skip with arrow keys</div>
+                  </div>
+                  <select id="cfg-seek-interval" class="theme-select">
+                    <option value="5">5 seconds</option>
+                    <option value="10" selected>10 seconds</option>
+                    <option value="15">15 seconds</option>
+                    <option value="30">30 seconds</option>
+                  </select>
+                </div>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Audio Output Device</div>
+                    <div class="setting-desc">Select active speaker / headphone sink</div>
+                  </div>
+                  <select id="cfg-output-sink" class="theme-select">
+                    <option value="default">Default System Audio</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 🔊 AUDIO -->
+              <div id="sec-audio" class="settings-panel">
+                <h3 class="panel-title">Audio & Sound Processing</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">10-Band Equalizer Status</div>
+                    <div class="setting-desc">Enable hardware biquad audio equalization</div>
+                  </div>
+                  <input type="checkbox" id="cfg-eq-enable" checked class="switch-toggle">
+                </div>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Hardware Volume Booster (Gain Limit)</div>
+                    <div class="setting-desc">Max amplified volume cap (up to 250%)</div>
+                  </div>
+                  <select id="cfg-boost-limit" class="theme-select">
+                    <option value="1.0">100% (Standard Max)</option>
+                    <option value="1.5">150% (Enhanced)</option>
+                    <option value="2.0">200% (High Boost)</option>
+                    <option value="2.5" selected>250% (Max Punch)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 📥 DOWNLOADS -->
+              <div id="sec-downloads" class="settings-panel">
+                <h3 class="panel-title">Offline Downloads Settings</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Download Location</div>
+                    <div class="setting-desc">Directory where offline audio files are stored</div>
+                  </div>
+                  <span class="setting-badge-text">~/Music/Cord/</span>
+                </div>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Audio Bitrate & Quality</div>
+                    <div class="setting-desc">Bitrate encoding for downloaded files</div>
+                  </div>
+                  <select id="cfg-dl-quality" class="theme-select">
+                    <option value="320" selected>320 kbps (High Fidelity)</option>
+                    <option value="256">256 kbps (Standard)</option>
+                    <option value="128">128 kbps (Compact)</option>
+                  </select>
+                </div>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Clear Offline Downloads</div>
+                    <div class="setting-desc">Delete all locally saved music files</div>
+                  </div>
+                  <button id="btn-clear-downloads" class="btn-white-pill" style="color: var(--primary);">Clear Downloads</button>
+                </div>
+              </div>
+
+              <!-- 📚 LIBRARY -->
+              <div id="sec-library" class="settings-panel">
+                <h3 class="panel-title">Library Management</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Music Library Path</div>
+                    <div class="setting-desc">Local directory indexed by Cord Player</div>
+                  </div>
+                  <span class="setting-badge-text">~/Music/</span>
+                </div>
+              </div>
+
+              <!-- 🖼️ ARTWORK & METADATA -->
+              <div id="sec-artwork" class="settings-panel">
+                <h3 class="panel-title">Artwork & Metadata</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">High-Resolution Album Art</div>
+                    <div class="setting-desc">Fetch 512px / 1080px maximum quality cover thumbnails</div>
+                  </div>
+                  <input type="checkbox" id="cfg-highres-art" checked class="switch-toggle">
+                </div>
+              </div>
+
+              <!-- 📝 LYRICS -->
+              <div id="sec-lyrics" class="settings-panel">
+                <h3 class="panel-title">Lyrics Customizer</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Synchronized Karaoke Lyrics</div>
+                    <div class="setting-desc">Automatically fetch and time-sync scrolling lyrics</div>
+                  </div>
+                  <input type="checkbox" id="cfg-synced-lyrics" checked class="switch-toggle">
+                </div>
+              </div>
+
+              <!-- 🔔 NOTIFICATIONS -->
+              <div id="sec-notifications" class="settings-panel">
+                <h3 class="panel-title">Notifications</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Track Change Notifications</div>
+                    <div class="setting-desc">Show desktop alert when a new song starts playing</div>
+                  </div>
+                  <input type="checkbox" id="cfg-desktop-notif" checked class="switch-toggle">
+                </div>
+              </div>
+
+              <!-- 🖥️ INTERFACE -->
+              <div id="sec-interface" class="settings-panel">
+                <h3 class="panel-title">Interface Settings</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Startup Page</div>
+                    <div class="setting-desc">Default tab loaded on startup</div>
+                  </div>
+                  <select id="cfg-startup-page" class="theme-select">
+                    <option value="home" selected>Home</option>
+                    <option value="search">Search</option>
+                    <option value="library">Library</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- ⌨️ KEYBOARD & CONTROLS -->
+              <div id="sec-keyboard" class="settings-panel">
+                <h3 class="panel-title">Keyboard Shortcuts</h3>
+                <div class="keybinds-table">
+                  <div class="keybind-row"><span>Play / Pause</span><div class="key-pill"><kbd>Space</kbd></div></div>
+                  <div class="keybind-row"><span>Next Track</span><div class="key-pill"><kbd>Ctrl</kbd> + <kbd>→</kbd></div></div>
+                  <div class="keybind-row"><span>Previous Track</span><div class="key-pill"><kbd>Ctrl</kbd> + <kbd>←</kbd></div></div>
+                  <div class="keybind-row"><span>Seek Forward / Backward</span><div class="key-pill"><kbd>→</kbd> / <kbd>←</kbd></div></div>
+                  <div class="keybind-row"><span>Volume Up / Down</span><div class="key-pill"><kbd>↑</kbd> / <kbd>↓</kbd></div></div>
+                  <div class="keybind-row"><span>Mute / Unmute</span><div class="key-pill"><kbd>M</kbd></div></div>
+                  <div class="keybind-row"><span>Toggle Shuffle</span><div class="key-pill"><kbd>S</kbd></div></div>
+                  <div class="keybind-row"><span>Toggle Repeat</span><div class="key-pill"><kbd>R</kbd></div></div>
+                  <div class="keybind-row"><span>Cinema Mode</span><div class="key-pill"><kbd>F</kbd></div></div>
+                  <div class="keybind-row"><span>Open Search</span><div class="key-pill"><kbd>/</kbd></div></div>
+                </div>
+              </div>
+
+              <!-- 🌐 MUSIC ENGINE -->
+              <div id="sec-ytmusic" class="settings-panel">
+                <h3 class="panel-title">Music Engine</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Streaming Quality</div>
+                    <div class="setting-desc">Default raw audio stream quality</div>
+                  </div>
+                  <select id="cfg-stream-quality" class="theme-select">
+                    <option value="best" selected>High Bitrate (Opus / M4A 256k)</option>
+                    <option value="medium">Medium (128k)</option>
+                    <option value="saver">Data Saver Mode</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 🔗 DISCORD -->
+              <div id="sec-discord" class="settings-panel">
+                <h3 class="panel-title">Discord Rich Presence</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Enable Discord Rich Presence</div>
+                    <div class="setting-desc">Show your live song status on your Discord profile</div>
+                  </div>
+                  <input type="checkbox" id="cfg-discord-enable" checked class="switch-toggle">
+                </div>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Show Artist Name</div>
+                    <div class="setting-desc">Include artist name in Discord activity</div>
+                  </div>
+                  <input type="checkbox" id="cfg-discord-artist" checked class="switch-toggle">
+                </div>
+              </div>
+
+              <!-- ⚙️ ADVANCED -->
+              <div id="sec-advanced" class="settings-panel">
+                <h3 class="panel-title">Advanced Settings</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Reset to Factory Defaults</div>
+                    <div class="setting-desc">Restore all audio, theme, playback, and interface configurations. (This will restore your player to default settings)</div>
+                  </div>
+                  <button id="btn-reset-all-settings" class="btn-danger-pill">
+                    <span class="material-symbols-rounded" style="font-size: 18px;">restart_alt</span>
+                    <span>Reset Settings</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 💾 STORAGE -->
+              <div id="sec-storage" class="settings-panel">
+                <h3 class="panel-title">Storage & Cache</h3>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Offline Downloads Storage</div>
+                    <div class="setting-desc" id="storage-usage-desc">Calculating disk usage...</div>
+                  </div>
+                  <span class="setting-badge-text" id="storage-usage-badge">0 MB</span>
+                </div>
+                <div class="setting-item-card">
+                  <div class="setting-text">
+                    <div class="setting-name">Clear Listening History</div>
+                    <div class="setting-desc">Reset your personalized recommendation history</div>
+                  </div>
+                  <button id="btn-clear-history" class="btn-white-pill">Clear History</button>
+                </div>
+              </div>
+
+              <!-- 🛠️ ABOUT -->
+              <div id="sec-about" class="settings-panel">
+                <h3 class="panel-title">About Cord Player</h3>
+                <div class="about-card-box">
+                  <div class="brand-icon" style="width: 52px; height: 52px;">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z" fill="#FFFFFF"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">Cord Player</h2>
+                    <span style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">Version 2.5.0 (Music Edition)</span>
+                  </div>
+                  <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6;">
+                    A high-performance, ad-free music streaming & offline desktop player with synchronized karaoke lyrics, 10-band equalizer, artist profiles, and smart recommendations.
+                  </p>
+                  <div class="about-actions-row">
+                    <button id="btn-check-updates" class="btn-primary-pill">Check for Updates</button>
+                    <span class="setting-badge-text">MIT Open Source</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Persistent Player Bar -->
+    <footer class="player-bar">
+      <!-- Left Track Info -->
+      <div class="now-playing" id="bar-track-info-click" title="Click to open Wide Screen Cinema Mode">
+        <div class="track-thumb-box">
+          <img id="current-thumb" src="/assets/avatars/music.svg" alt="Cover">
+          <div class="thumb-overlay-btn">
+            <span class="material-symbols-rounded">open_in_full</span>
+          </div>
+        </div>
+        <div class="track-details">
+          <div id="current-title" class="title">No track playing</div>
+          <div id="current-artist" class="artist">Search or choose a song</div>
+        </div>
+        <button id="like-btn" class="icon-btn" title="Favorite">
+          <span class="material-symbols-rounded">favorite_border</span>
+        </button>
+        <button id="download-btn" class="icon-btn" title="Download Offline MP3">
+          <span class="material-symbols-rounded">download</span>
+        </button>
+      </div>
+
+      <!-- Center Player Controls -->
+      <div class="player-controls-container">
+        <div class="control-buttons">
+          <button id="shuffle-btn" class="icon-btn-small" title="Shuffle">
+            <span class="material-symbols-rounded">shuffle</span>
+          </button>
+          <button id="prev-btn" class="icon-btn" title="Previous Track">
+            <span class="material-symbols-rounded">skip_previous</span>
+          </button>
+          <button id="play-pause-btn" class="play-btn" title="Play">
+            <span class="material-symbols-rounded" id="play-icon">play_arrow</span>
+          </button>
+          <button id="next-btn" class="icon-btn" title="Next Track">
+            <span class="material-symbols-rounded">skip_next</span>
+          </button>
+          <button id="repeat-btn" class="icon-btn-small" title="Repeat Mode">
+            <span class="material-symbols-rounded" id="repeat-icon">repeat</span>
+          </button>
+        </div>
+
+        <div class="scrubber-bar">
+          <span id="current-time">0:00</span>
+          <div class="slider-wrapper" id="progress-wrapper">
+            <div id="progress-bar-fill" class="slider-fill"></div>
+            <input type="range" id="progress-slider" min="0" max="100" value="0" step="0.1">
+          </div>
+          <span id="total-time">0:00</span>
+        </div>
+      </div>
+
+      <!-- Right Volume & Extra Options -->
+      <div class="player-extra-controls">
+        <button id="quick-lyrics-btn" class="icon-btn" title="Lyrics">
+          <span class="material-symbols-rounded">lyrics</span>
+        </button>
+        <button id="quick-eq-btn" class="icon-btn" title="Equalizer">
+          <span class="material-symbols-rounded">tune</span>
+        </button>
+        <button id="quick-queue-btn" class="icon-btn" title="Queue">
+          <span class="material-symbols-rounded">queue_music</span>
+        </button>
+        <div class="volume-container">
+          <button id="mute-btn" class="icon-btn" title="Mute/Unmute">
+            <span class="material-symbols-rounded" id="volume-icon">volume_up</span>
+          </button>
+          <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1.0">
+        </div>
+      </div>
+    </footer>
+
+    <!-- WIDE SCREEN / CINEMA IMMERSIVE OVERLAY -->
+    <div id="cinema-overlay" class="cinema-view">
+      <button id="close-cinema-btn" class="cinema-close-btn" title="Close Full Screen">
+        <span class="material-symbols-rounded">close_fullscreen</span>
+      </button>
+
+      <div class="cinema-content">
+        <div class="cinema-left">
+          <div class="vinyl-wrapper">
+            <img id="cinema-thumb" src="/assets/avatars/music.svg" alt="Album Art">
+          </div>
+          <div class="cinema-info">
+            <h1 id="cinema-title">Track Title</h1>
+            <h3 id="artist-profile-sublink" style="cursor: pointer;" title="View Artist Profile">Artist Name</h3>
+          </div>
+          <canvas id="cinema-visualizer" width="500" height="100"></canvas>
+        </div>
+
+        <div class="cinema-right">
+          <div class="cinema-lyrics-header">
+            <span>LIVE SYNCHRONIZED KARAOKE LYRICS</span>
+          </div>
+          <div id="cinema-lyrics-scroll" class="cinema-lyrics-box">
+            <!-- Synced lyrics -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3-Dot Context Action Menu Popover -->
+    <div id="card-context-menu" class="card-context-menu" style="display: none;">
+      <button class="context-item" data-action="play">
+        <span class="material-symbols-rounded">play_arrow</span>
+        <span>Play Now</span>
+      </button>
+      <button class="context-item" data-action="play-next">
+        <span class="material-symbols-rounded">playlist_play</span>
+        <span>Play Next</span>
+      </button>
+      <button class="context-item" data-action="add-queue">
+        <span class="material-symbols-rounded">queue_music</span>
+        <span>Add to Queue</span>
+      </button>
+      <button class="context-item" data-action="favorite">
+        <span class="material-symbols-rounded">favorite</span>
+        <span>Add to Favorites</span>
+      </button>
+      <button class="context-item" data-action="download">
+        <span class="material-symbols-rounded">download</span>
+        <span>Download Offline</span>
+      </button>
+      <button class="context-item" data-action="view-artist">
+        <span class="material-symbols-rounded">person</span>
+        <span>View Artist Profile</span>
+      </button>
+    </div>
+
+    <!-- Direct Native Audio Element -->
+    <audio id="audio-player" preload="auto" crossorigin="anonymous"></audio>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

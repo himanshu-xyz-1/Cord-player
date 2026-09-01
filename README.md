@@ -1,0 +1,240 @@
+<div align="center">
+
+# 🎵 Cord Player
+
+### *Next-Generation Desktop Music & Podcast Streaming Engine*
+
+[![Version](https://img.shields.io/badge/version-2.5.0-FF0D2E.svg?style=for-the-badge&logo=musicbrainz&logoColor=white)](https://github.com/)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Wayland%20%7C%20X11-FF4081.svg?style=for-the-badge&logo=linux&logoColor=white)](https://archlinux.org)
+
+<br/>
+
+> **Cord Player** is a sleek, ultra-responsive, ad-free desktop music and podcast client built with modern glassmorphism UI, real-time WebAudio processing, live synchronized karaoke lyrics, 10-band equalizer, offline downloading, and Discord Rich Presence.
+
+<br/>
+
+[✨ Features](#-key-features) • [📸 Screenshots](#-visual-showcase) • [⚡ Quick Start](#-quick-start) • [🎛️ Architecture](#-system-architecture) • [⌨️ Shortcuts](#️-keyboard-shortcuts)
+
+---
+
+</div>
+
+<br/>
+
+## 📸 Visual Showcase
+
+<div align="center">
+
+### 🎵 Dynamic Home & Daily Recommendations
+*Curated personal mix, global trending hits, and real-time audio visualizer.*
+
+<img src="./docs/screenshots/home_music.png" width="95%" style="border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.4);" alt="Cord Player Music Home"/>
+
+<br/><br/>
+
+### 🎙️ Dedicated Podcasts & Audio Shows Hub
+*Popular podcast episodes with duration badges, creator profiles, and direct one-click playback.*
+
+<img src="./docs/screenshots/home_podcasts.png" width="95%" style="border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.4);" alt="Cord Player Podcasts"/>
+
+<br/><br/>
+
+### 🎬 Immersive Cinema Mode with Live Karaoke Lyrics
+*Synced lyrics tracking, interactive click-to-seek, glowing vinyl artwork, and dual-tone frequency analyzer.*
+
+<img src="./docs/screenshots/cinema_lyrics.png" width="95%" style="border-radius: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.4);" alt="Cord Player Cinema Mode"/>
+
+</div>
+
+<br/>
+
+---
+
+## ✨ Key Features
+
+<table>
+  <tr>
+    <td width="50%">
+      <h3>🚀 Blazing Fast Ad-Free Streaming</h3>
+      <ul>
+        <li><b>Sub-second audio loading</b> via multi-client stream resolution (<code>android</code>, <code>ios</code>, <code>web</code>).</li>
+        <li>100% ad-free playback with adaptive bitrate streaming (up to 320kbps).</li>
+        <li>Continuous uninterrupted playback with Smart Radio queueing.</li>
+      </ul>
+    </td>
+    <td width="50%">
+      <h3>🎤 Live Synchronized Karaoke Lyrics</h3>
+      <ul>
+        <li>Real-time syllable & line synchronization with smooth auto-scrolling.</li>
+        <li><b>Interactive Seek</b>: Click any lyric line to jump directly to that timestamp.</li>
+        <li>Plaintext and Romanized fallback support for international languages.</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>🎚️ 10-Band Studio Equalizer & Booster</h3>
+      <ul>
+        <li>Precision biquad filter chain (<code>60Hz</code> to <code>16kHz</code>).</li>
+        <li>Pre-calibrated presets: <i>Bass Boost, Vocal, Rock, Pop, Electronic, Classical</i>.</li>
+        <li>Hardware volume pre-amp booster up to <b>150%</b>.</li>
+      </ul>
+    </td>
+    <td width="50%">
+      <h3>📥 Offline Music Downloader</h3>
+      <ul>
+        <li>Download full tracks offline directly to <code>~/Music/Cord/</code>.</li>
+        <li>Embedded ID3 tags, artist metadata, and high-resolution album artwork.</li>
+        <li>Dedicated Offline Library section with instant storage management.</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>🎨 Custom Color Studio & Theming</h3>
+      <ul>
+        <li>15 curated vibrant presets + custom hex gradient generator.</li>
+        <li><b>Dynamic Aura</b> ambient lighting vs <b>Solid Slate</b> minimal mode.</li>
+        <li>Morphing border radius: <i>Pill (28px)</i>, <i>Standard (16px)</i>, <i>Sharp (6px)</i>.</li>
+      </ul>
+    </td>
+    <td width="50%">
+      <h3>🎮 Discord Rich Presence & MediaSession</h3>
+      <ul>
+        <li>Broadcast current track, artist, album art, and live elapsed timer to Discord.</li>
+        <li>Native Linux OS MediaSession integration (play/pause/skip via media keys).</li>
+        <li>Multi-device output sink selector for Bluetooth headphones & DACs.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<br/>
+
+---
+
+## 🎛️ System Architecture
+
+```mermaid
+flowchart TD
+    subgraph UI ["🖥️ Frontend (HTML5 / Glassmorphism CSS / JS)"]
+        UI_Home["🏠 Home (Music & Podcasts)"]
+        UI_Search["🔍 Live Search & Suggestions"]
+        UI_Cinema["🎬 Cinema Mode & Synced Lyrics"]
+        UI_Studio["🎨 Custom Color Studio"]
+        UI_WebAudio["🔊 WebAudio API (10-Band EQ + Analyser)"]
+    end
+
+    subgraph Backend ["⚡ FastAPI Backend Server (Port 8765)"]
+        API_Audio["/api/audio/{id} (Chunked Streaming Proxy)"]
+        API_Podcasts["/api/podcasts (Episodes & Shows)"]
+        API_Explore["/api/explore & /api/recommendations"]
+        API_Lyrics["/api/lyrics (LRC Synced Engine)"]
+        API_Download["/api/download (Local ~/Music/Cord)"]
+        API_RPC["/api/discord_rpc (Discord IPC Bridge)"]
+    end
+
+    subgraph Core ["📡 Audio Resolvers & External Providers"]
+        YTDLP["yt-dlp Multi-Client Resolver"]
+        YTM["ytmusicapi Engine"]
+        LRC["Synced LRCLIB / NetEase Provider"]
+        DISK["Local Storage (library.json)"]
+    end
+
+    UI -->|HTTP / REST| Backend
+    Backend --> Core
+    API_Audio -->|Direct Stream Chunks| UI_WebAudio
+```
+
+<br/>
+
+---
+
+## ⚡ Quick Start
+
+### 1. Prerequisites
+- **Linux** (Arch, Fedora, Debian, Ubuntu) or Wayland compositor (Hyprland, Sway, GNOME, KDE)
+- **Python 3.10+**
+- **Chromium / Chrome** (or any modern Chromium-based browser for standalone app mode)
+
+### 2. Installation & Run
+
+```bash
+# Clone the repository
+git clone https://github.com/himanshuxd/cord-player.git
+cd cord-player
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Run Cord Player
+python main.py
+```
+
+Or run via the system command:
+```bash
+cord-player
+# or simply:
+cord
+```
+
+<br/>
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Action |
+| :--- | :--- |
+| <kbd>Space</kbd> | Toggle Play / Pause |
+| <kbd>→</kbd> / <kbd>←</kbd> | Seek forward / backward (configurable: 5s, 10s, 15s, 30s) |
+| <kbd>Ctrl</kbd> + <kbd>→</kbd> | Play Next Track |
+| <kbd>Ctrl</kbd> + <kbd>←</kbd> | Play Previous Track |
+| <kbd>↑</kbd> / <kbd>↓</kbd> | Volume Up / Down (+5% / -5%) |
+| <kbd>M</kbd> | Mute / Unmute Audio |
+| <kbd>S</kbd> | Toggle Shuffle Mode |
+| <kbd>R</kbd> | Cycle Repeat Mode (*Off → All → One*) |
+| <kbd>F</kbd> | Open Wide-Screen Cinema Mode with Synced Lyrics |
+| <kbd>/</kbd> | Focus Global Search Bar |
+| <kbd>Esc</kbd> | Close Popups / Exit Cinema Mode |
+
+<br/>
+
+---
+
+## 📂 Project Structure
+
+```
+cord-player/
+├── backend/
+│   ├── main.py              # FastAPI application & REST routing
+│   ├── ytmusic.py           # Multi-endpoint audio extraction & search
+│   ├── lyrics.py            # Synchronized LRC lyrics parser
+│   └── discord_rpc.py       # Discord Rich Presence IPC client
+├── frontend/
+│   ├── index.html           # Core application markup
+│   ├── style.css            # Responsive Glassmorphism styles & animations
+│   └── app.js               # WebAudio graph, player state & DOM engine
+├── assets/                  # Icons, SVGs, and visual presets
+├── docs/screenshots/        # Repository showcase screenshots
+├── main.py                  # Standalone application launcher
+├── requirements.txt         # Python package dependencies
+└── README.md                # Project documentation
+```
+
+<br/>
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License**. See `LICENSE` for more information.
+
+<div align="center">
+
+Crafted with ❤️ for music enthusiasts.
+
+</div>
