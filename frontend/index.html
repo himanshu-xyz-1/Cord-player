@@ -602,9 +602,13 @@
                   <span class="material-symbols-rounded">shuffle</span>
                   <span>Shuffle</span>
                 </button>
+                <button id="collection-add-songs-btn" class="btn-primary-pill" style="display: none;">
+                  <span class="material-symbols-rounded">playlist_add</span>
+                  <span>Add Songs</span>
+                </button>
                 <button id="collection-edit-btn" class="btn-white-pill" style="display: none;">
                   <span class="material-symbols-rounded">edit</span>
-                  <span>Edit Playlist</span>
+                  <span>Edit Details</span>
                 </button>
                 <button id="collection-delete-btn" class="btn-white-pill" style="display: none; color: var(--primary);">
                   <span class="material-symbols-rounded">delete</span>
@@ -1371,6 +1375,10 @@
         <span class="material-symbols-rounded">person</span>
         <span>View Artist Profile</span>
       </button>
+      <button class="context-item" data-action="remove-from-playlist" style="display: none; color: var(--primary);">
+        <span class="material-symbols-rounded">playlist_remove</span>
+        <span>Remove from Playlist</span>
+      </button>
     </div>
 
     <!-- 1. CREATE PLAYLIST MODAL -->
@@ -1477,6 +1485,37 @@
             <span>New Playlist</span>
           </button>
           <button class="btn-white-pill" data-close="modal-add-to-playlist">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. SEARCH & ADD SONGS TO PLAYLIST MODAL -->
+    <div id="modal-search-add-songs" class="modal-backdrop" style="display: none;">
+      <div class="modal-card" style="max-width: 580px;">
+        <div class="modal-header">
+          <div>
+            <h3 id="modal-search-playlist-title">Add Songs to Playlist</h3>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Search and click "+" to add songs instantly</span>
+          </div>
+          <button class="modal-close-btn" data-close="modal-search-add-songs">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-form-group">
+            <div style="position: relative; display: flex; align-items: center;">
+              <span class="material-symbols-rounded" style="position: absolute; left: 12px; color: var(--text-dim); pointer-events: none;">search</span>
+              <input type="text" id="playlist-search-song-input" class="modal-input" placeholder="Search songs or artists to add..." style="padding-left: 40px; width: 100%;">
+            </div>
+          </div>
+          <div id="playlist-search-results-list" class="playlists-pick-list" style="max-height: 320px; min-height: 120px;">
+            <div class="empty-state" style="padding: 24px; text-align: center;">
+              <p>Type a song or artist name to find and add tracks.</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary-pill" data-close="modal-search-add-songs">Done</button>
         </div>
       </div>
     </div>

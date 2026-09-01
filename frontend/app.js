@@ -1087,7 +1087,7 @@ class CordPlayer {
   }
 
   // --- THREE-DOT CONTEXT MENU ---
-  openContextMenu(e, track) {
+  openContextMenu(e, track, isInsideCustomPlaylist = false) {
     this.contextTargetTrack = track;
     if (!this.contextMenu) return;
 
@@ -1121,6 +1121,13 @@ class CordPlayer {
         favBtn.querySelector('.material-symbols-rounded').innerText = 'favorite';
         favBtn.querySelector('span:last-child').innerText = 'Add to Favorites';
       }
+    }
+
+    // 3. Remove From Playlist Option
+    const removePlBtn = this.contextMenu.querySelector('[data-action="remove-from-playlist"]');
+    if (removePlBtn) {
+      const showRemove = isInsideCustomPlaylist || (this.currentCollectionIsCustom && document.getElementById('view-collection')?.classList.contains('active'));
+      removePlBtn.style.display = showRemove ? 'flex' : 'none';
     }
 
     const x = Math.min(e.clientX, window.innerWidth - 220);
@@ -1161,6 +1168,17 @@ class CordPlayer {
         break;
       case 'add-to-playlist':
         this.openAddToPlaylistModal(track);
+        break;
+      case 'remove-from-playlist':
+        if (this.currentCollection && this.currentCollection.id && this.currentCollection.tracks) {
+          const tIdx = this.currentCollection.tracks.findIndex(t => t.id === track.id);
+          if (tIdx >= 0) {
+            this.currentCollection.tracks.splice(tIdx, 1);
+            localStorage.setItem('cord_custom_playlists', JSON.stringify(this.customPlaylists));
+            this.renderCustomPlaylists();
+            this.openCollection(this.currentCollection, 'playlist');
+          }
+        }
         break;
       case 'favorite':
       case 'remove-favorite':
@@ -1528,12 +1546,16 @@ class CordPlayer {
     if (isCustom) {
       if (editBtn) editBtn.style.display = 'inline-flex';
       if (deleteBtn) deleteBtn.style.display = 'inline-flex';
+      const addSongsBtn = document.getElementById('collection-add-songs-btn');
+      if (addSongsBtn) addSongsBtn.style.display = 'inline-flex';
       if (hint) hint.innerText = 'Drag & drop any track row to reorder sequence';
       heroAuthor.style.cursor = 'default';
       heroAuthor.onclick = null;
     } else {
       if (editBtn) editBtn.style.display = 'none';
       if (deleteBtn) deleteBtn.style.display = 'none';
+      const addSongsBtn = document.getElementById('collection-add-songs-btn');
+      if (addSongsBtn) addSongsBtn.style.display = 'none';
       if (hint) hint.innerText = 'Click any track to start playing';
       heroAuthor.style.cursor = 'pointer';
       heroAuthor.onclick = () => {
@@ -1570,7 +1592,24 @@ class CordPlayer {
   renderCollectionTracklist(tracks, table, isCustom) {
     if (!table) return;
     if (!tracks || tracks.length === 0) {
-      table.innerHTML = '<div class="empty-state" style="padding: 36px 12px;"><p>No tracks in this collection yet. Use "Add to Playlist..." from any song menu!</p></div>';
+      if (isCustom) {
+        table.innerHTML = `
+          <div class="empty-state" style="padding: 40px 16px; text-align: center;">
+            <span class="material-symbols-rounded" style="font-size: 44px; color: var(--text-dim); margin-bottom: 8px;">playlist_add</span>
+            <h4 style="margin-bottom: 6px; font-size: 1.1rem; color: var(--text-main);">This Playlist is Empty</h4>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">Click below to search and add your favorite tracks directly to this playlist!</p>
+            <button id="table-add-songs-btn" class="btn-primary-pill" style="margin: 0 auto;">
+              <span class="material-symbols-rounded">add</span>
+              <span>Add Songs to Playlist</span>
+            </button>
+          </div>
+        `;
+        document.getElementById('table-add-songs-btn')?.addEventListener('click', () => {
+          this.openSearchAddSongsModal();
+        });
+      } else {
+        table.innerHTML = '<div class="empty-state" style="padding: 36px 12px;"><p>No tracks in this collection.</p></div>';
+      }
       return;
     }
 
@@ -1606,7 +1645,7 @@ class CordPlayer {
 
       row.querySelector('.card-more-btn')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.openContextMenu(e, track);
+        this.openContextMenu(e, track, isCustom);
       });
 
       row.addEventListener('click', () => {
@@ -1942,6 +1981,88 @@ class CordPlayer {
       this.openCreatePlaylistModal();
     });
 
+    // 4. Add Songs Directly via Inline Search Modal
+    document.getElementById('collection-add-songs-btn')?.addEventListener('click', () => {
+      this.openSearchAddSongsModal();
+    });
+
+    const searchAddInput = document.getElementById('playlist-search-song-input');
+    const searchAddResults = document.getElementById('playlist-search-results-list');
+    let searchAddTimeout = null;
+
+    searchAddInput?.addEventListener('input', (e) => {
+      const q = e.target.value.trim();
+      clearTimeout(searchAddTimeout);
+      if (!q) {
+        searchAddResults.innerHTML = '<div class="empty-state" style="padding: 24px; text-align: center;"><p>Type a song or artist name to find and add tracks.</p></div>';
+        return;
+      }
+
+      searchAddResults.innerHTML = '<div class="empty-state" style="padding: 24px; text-align: center;"><p>Searching songs...</p></div>';
+
+      searchAddTimeout = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&filter=songs`);
+          const data = await res.json();
+          const songs = data.results || [];
+
+          if (songs.length === 0) {
+            searchAddResults.innerHTML = '<div class="empty-state" style="padding: 24px; text-align: center;"><p>No songs found for your search.</p></div>';
+            return;
+          }
+
+          searchAddResults.innerHTML = '';
+          songs.slice(0, 15).forEach(song => {
+            const item = document.createElement('div');
+            item.className = 'playlist-pick-item';
+            
+            const isAlreadyAdded = this.currentCollection && this.currentCollection.tracks && this.currentCollection.tracks.some(t => t.id === song.id);
+            const ytFallback = song.id ? `https://i.ytimg.com/vi/${song.id}/hqdefault.jpg` : '/assets/avatars/music.svg';
+
+            item.innerHTML = `
+              <img src="${song.thumbnail || ytFallback}" class="playlist-pick-thumb" alt="${song.title}" onerror="this.onerror=null;this.src='${ytFallback}'">
+              <div style="flex: 1; overflow: hidden;">
+                <div class="playlist-pick-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${song.title}</div>
+                <div class="playlist-pick-count">${song.artist || 'Unknown Artist'} • ${song.duration || '3:30'}</div>
+              </div>
+              <button class="${isAlreadyAdded ? 'btn-white-pill' : 'btn-primary-pill'}" style="padding: 6px 14px; font-size: 0.8rem;">
+                <span class="material-symbols-rounded" style="font-size: 18px;">${isAlreadyAdded ? 'check' : 'add'}</span>
+                <span>${isAlreadyAdded ? 'Added' : 'Add'}</span>
+              </button>
+            `;
+
+            const btn = item.querySelector('button');
+            btn.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              if (!this.currentCollection.tracks) this.currentCollection.tracks = [];
+              const exists = this.currentCollection.tracks.some(t => t.id === song.id);
+              if (exists) {
+                this.currentCollection.tracks = this.currentCollection.tracks.filter(t => t.id !== song.id);
+                btn.className = 'btn-primary-pill';
+                btn.querySelector('.material-symbols-rounded').innerText = 'add';
+                btn.querySelector('span:last-child').innerText = 'Add';
+              } else {
+                this.currentCollection.tracks.push(song);
+                btn.className = 'btn-white-pill';
+                btn.querySelector('.material-symbols-rounded').innerText = 'check';
+                btn.querySelector('span:last-child').innerText = 'Added';
+              }
+
+              localStorage.setItem('cord_custom_playlists', JSON.stringify(this.customPlaylists));
+              this.renderCustomPlaylists();
+              this.openCollection(this.currentCollection, 'playlist');
+            });
+
+            searchAddResults.appendChild(item);
+          });
+
+        } catch (err) {
+          console.error('Search add songs error:', err);
+          searchAddResults.innerHTML = '<div class="empty-state" style="padding: 24px; text-align: center;"><p>Error searching songs.</p></div>';
+        }
+      }, 300);
+    });
+
     // Modal Close Buttons
     document.querySelectorAll('[data-close]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1969,6 +2090,28 @@ class CordPlayer {
         this.renderDiscographyReleases(pill.dataset.filter);
       });
     });
+  }
+
+  openSearchAddSongsModal() {
+    if (!this.currentCollection) return;
+    const titleEl = document.getElementById('modal-search-playlist-title');
+    const input = document.getElementById('playlist-search-song-input');
+    const resultsList = document.getElementById('playlist-search-results-list');
+    
+    if (titleEl) titleEl.innerText = `Add Songs to "${this.currentCollection.title}"`;
+    if (input) {
+      input.value = '';
+      setTimeout(() => input.focus(), 100);
+    }
+    if (resultsList) {
+      resultsList.innerHTML = `
+        <div class="empty-state" style="padding: 24px; text-align: center;">
+          <p>Type a song, artist, or album name to find tracks to add.</p>
+        </div>
+      `;
+    }
+
+    this.openModal('modal-search-add-songs');
   }
 
   openCreatePlaylistModal() {
