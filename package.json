@@ -1,0 +1,17 @@
+{
+  "name": "cord-player",
+  "version": "2.5.0",
+  "description": "Cord Player - Desktop & Mobile Music Streaming App",
+  "main": "main.py",
+  "scripts": {
+    "build": "echo 'Frontend ready in ./frontend'",
+    "cap:sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0"
+  },
+  "author": "Himanshu Joshi",
+  "license": "MIT"
+}
