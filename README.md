@@ -5,12 +5,10 @@
 ### *Next-Generation Cross-Platform Desktop & Mobile Music Streaming Engine*
 
 [![Version](https://img.shields.io/badge/version-2.5.0-FF0D2E.svg?style=for-the-badge&logo=musicbrainz&logoColor=white)](https://github.com/himanshu-xyz-1/Cord-player)
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Download APK](https://img.shields.io/badge/Android%20APK-Download%20v2.5.0-3DDC84.svg?style=for-the-badge&logo=android&logoColor=white)](https://github.com/himanshu-xyz-1/Cord-player/releases/download/v2.5.0/CordPlayer.apk)
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6.svg?style=for-the-badge&logo=windows&logoColor=white)](https://microsoft.com/windows)
 [![macOS](https://img.shields.io/badge/macOS-Intel%20%7C%20Apple%20Silicon-000000.svg?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com/macos)
 [![Linux](https://img.shields.io/badge/Linux-Wayland%20%7C%20X11-FCC624.svg?style=for-the-badge&logo=linux&logoColor=black)](https://archlinux.org)
-[![Android](https://img.shields.io/badge/Android-PWA%20%2F%20APK-3DDC84.svg?style=for-the-badge&logo=android&logoColor=white)](https://android.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
 <br/>
@@ -19,13 +17,53 @@
 
 <br/>
 
-[✨ Features](#-key-features) • [📸 Screenshots](#-visual-showcase) • [⚡ Cross-Platform Quick Start](#-cross-platform-quick-start) • [📱 Phone & Android](#-phone--android-support) • [🎛️ Architecture](#-system-architecture) • [⌨️ Shortcuts](#️-keyboard-shortcuts)
+<a href="https://github.com/himanshu-xyz-1/Cord-player/releases/download/v2.5.0/CordPlayer.apk">
+  <img src="https://img.shields.io/badge/📱%20Download%20CordPlayer.apk-Direct%20APK%20(5.4MB)-3DDC84?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download Cord Player APK"/>
+</a>
+
+<br/><br/>
+
+[📱 Android App](#-android-mobile-app) • [✨ Features](#-key-features) • [📸 Screenshots](#-visual-showcase) • [⚡ Desktop Quick Start](#-desktop-quick-start) • [🎛️ Architecture](#-system-architecture) • [⌨️ Shortcuts](#️-keyboard-shortcuts)
 
 ---
 
 </div>
 
 <br/>
+
+## 📱 Android Mobile App
+
+Get the full standalone **Cord Player** mobile experience directly on your Android phone!
+
+<div align="center">
+
+<a href="https://github.com/himanshu-xyz-1/Cord-player/releases/download/v2.5.0/CordPlayer.apk">
+  <img src="https://img.shields.io/badge/📥%20Download%20CordPlayer.apk-v2.5.0-3DDC84?style=for-the-badge&logo=android&logoColor=white" height="45" alt="Download APK"/>
+</a>
+
+<br/>
+
+**[View all Android Releases](https://github.com/himanshu-xyz-1/Cord-player/releases)** • *File size: 5.44 MB • Android 7.0+ (Nougat to Android 14+)*
+
+</div>
+
+<br/>
+
+### 🌟 Android Highlights:
+- 🔒 **Continuous Screen-OFF Playback**: Integrated with Android's `MediaPlaybackService` and CPU WakeLock—music keeps playing uninterrupted when your phone screen turns off, when locked, or while using other apps.
+- 📱 **Lock-Screen Media Controls**: Full live scrubber seek bar, high-resolution album artwork, track details, and quick play/pause/skip buttons in your notification shade and lock screen.
+- 🎧 **Bluetooth & Headphone Support**: Full hardware media button integration (AirPods, Galaxy Buds, wired headsets, and smartwatches).
+- 🎚️ **Hardware Equalizer & Synced Karaoke Lyrics**: Native real-time WebAudio engine with syllable-accurate auto-scrolling lyrics right on mobile.
+- 🚀 **100% Standalone**: Installs directly from the `.apk` without needing a computer running.
+
+#### 📲 How to Install:
+1. Download **[CordPlayer.apk](https://github.com/himanshu-xyz-1/Cord-player/releases/download/v2.5.0/CordPlayer.apk)** directly on your Android device.
+2. Tap the downloaded `.apk` file and grant *"Install from this source"* if prompted.
+3. Open **Cord Player** from your app drawer and enjoy unlimited ad-free music!
+
+<br/>
+
+---
 
 ## 📸 Visual Showcase
 
@@ -119,7 +157,7 @@
 
 ---
 
-## ⚡ Cross-Platform Quick Start
+## ⚡ Desktop Quick Start
 
 ### 🪟 Windows (10 / 11)
 
@@ -161,25 +199,6 @@ cd Cord-player
 pip install -r requirements.txt
 python3 main.py
 ```
-
-<br/>
-
----
-
-## 📱 Phone & Android Support
-
-Cord Player includes complete **Progressive Web App (PWA)** metadata and touch optimizations, allowing it to run smoothly on smartphones:
-
-### 1. Instant Mobile App (PWA)
-1. Run Cord Player on your computer / server.
-2. On your Android or iOS phone, connect to the same Wi-Fi and open `http://<your-pc-ip>:8765` in Chrome / Safari.
-3. Tap **Menu (⋮)** → **"Install App"** or **"Add to Home screen"**.
-4. Cord Player installs as a standalone native-feeling fullscreen app with touch gestures and background audio controls.
-
-### 2. Packaging as an Android `.apk`
-To build a standalone APK for Google Play or direct sideloading:
-- **Using PWA Builder / TWA (Recommended)**: Submit the running host URL to [PWABuilder.com](https://www.pwabuilder.com) to generate a signed Android APK package.
-- **Using Capacitor / Cordova**: Wrap the `frontend/` directory with Capacitor's Android runtime (`npx cap add android && npx cap open android`).
 
 <br/>
 
@@ -246,6 +265,9 @@ flowchart TD
 
 ```
 cord-player/
+├── android/                 # Native Android Studio Project
+│   ├── app/src/main/        # AndroidManifest, Java Services & XML layouts
+│   └── app/build.gradle     # Android Gradle build & dependencies
 ├── backend/
 │   ├── main.py              # FastAPI application & REST routing
 │   ├── ytmusic.py           # Multi-endpoint audio extraction & search
