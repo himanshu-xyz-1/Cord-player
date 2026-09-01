@@ -15,8 +15,12 @@ class CordPlayer {
     this.history = JSON.parse(localStorage.getItem('cord_history') || '[]');
     this.pinnedArtists = JSON.parse(localStorage.getItem('cord_pinned_artists') || '[]');
     this.recentSearches = JSON.parse(localStorage.getItem('cord_recent_searches') || '[]');
+    this.customPlaylists = JSON.parse(localStorage.getItem('cord_custom_playlists') || '[]');
     this.downloads = [];
     this.settings = JSON.parse(localStorage.getItem('cord_settings') || '{}');
+    this.currentCollection = null;
+    this.currentDiscography = null;
+    this.draggedTrackIndex = null;
     
     // Default Settings
     this.theme = this.settings.theme || 'red-white';
@@ -46,6 +50,8 @@ class CordPlayer {
     this.initEvents();
     this.renderPinnedArtists();
     this.renderRecentSearches();
+    this.renderCustomPlaylists();
+    this.initCustomPlaylistModals();
     this.loadExplore();
     this.loadRecommendations();
     this.loadDownloads();
@@ -997,6 +1003,10 @@ class CordPlayer {
     container.innerHTML = '';
     items.forEach((item, idx) => {
       const isArtist = item.type === 'artist' || this.activeFilter === 'artists';
+      const isCollection = item.type === 'album' || item.type === 'playlist' || item.type === 'ep' || item.type === 'Single/EP' ||
+        this.activeFilter === 'albums' || this.activeFilter === 'playlists' ||
+        (item.id && (String(item.id).startsWith('MPRE') || String(item.id).startsWith('OLAK') || String(item.id).startsWith('VLPL') || String(item.id).startsWith('PL') || String(item.id).startsWith('RD')));
+
       const card = document.createElement('div');
       card.className = 'music-card';
       
@@ -1012,6 +1022,32 @@ class CordPlayer {
         `;
         card.addEventListener('click', () => {
           this.openArtistProfile(item.id || item.title || item.name);
+        });
+      } else if (isCollection) {
+        const typeBadge = item.year ? ` • ${item.year}` : (item.type || (this.activeFilter === 'playlists' ? 'Playlist' : 'Album'));
+        const thumbSrc = item.thumbnail || '/assets/avatars/music.svg';
+
+        card.innerHTML = `
+          <div class="card-thumb-wrap">
+            <img src="${thumbSrc}" alt="${item.title}" loading="lazy" onerror="this.onerror=null;this.src='/assets/avatars/music.svg'">
+            <span class="release-type-badge">${typeBadge}</span>
+            <div class="card-play-overlay">
+              <button class="play-circle-btn"><span class="material-symbols-rounded">play_arrow</span></button>
+            </div>
+          </div>
+          <div class="card-info">
+            <div class="card-title" title="${item.title}">${item.title}</div>
+            <div class="card-artist">${item.artist || item.author || (this.activeFilter === 'playlists' ? 'Playlist' : 'Album')}</div>
+          </div>
+        `;
+        card.querySelector('.play-circle-btn')?.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await this.openCollection(item, this.activeFilter === 'playlists' ? 'playlist' : (item.type || 'album'));
+          const playBtn = document.getElementById('collection-play-all-btn');
+          if (playBtn) playBtn.click();
+        });
+        card.addEventListener('click', () => {
+          this.openCollection(item, this.activeFilter === 'playlists' ? 'playlist' : (item.type || 'album'));
         });
       } else {
         const isDownloaded = this.downloads.some(d => d.id === item.id);
@@ -1122,6 +1158,9 @@ class CordPlayer {
       case 'add-queue':
         this.queue.push(track);
         this.renderQueue();
+        break;
+      case 'add-to-playlist':
+        this.openAddToPlaylistModal(track);
         break;
       case 'favorite':
       case 'remove-favorite':
@@ -1310,11 +1349,7 @@ class CordPlayer {
             </div>
           `;
           card.addEventListener('click', () => {
-            if (rel.id && (rel.id.startsWith('MPREb') || rel.id.startsWith('OLAK5uy'))) {
-              this.playAlbum(rel.id);
-            } else {
-              this.performSearch(`${data.name} ${rel.title}`);
-            }
+            this.openCollection(rel, rel.type || 'album');
           });
           releasesGrid.appendChild(card);
         });
@@ -1410,26 +1445,608 @@ class CordPlayer {
         </div>
       `;
       card.addEventListener('click', () => {
-        if (item.id && (item.id.startsWith('MPREb') || item.id.startsWith('OLAK5uy'))) {
-          this.playAlbum(item.id);
-        } else {
-          this.performSearch(`${artistName} ${item.title}`);
-        }
+        this.openCollection(item, item.type || 'album');
       });
       container.appendChild(card);
     });
   }
 
-  async playAlbum(albumBrowseId) {
-    try {
-      const res = await fetch(`/api/album/${albumBrowseId}`);
-      const data = await res.json();
-      if (data.tracks && data.tracks.length > 0) {
-        this.setQueue(data.tracks, 0);
+  // --- COLLECTION VIEW (ALBUMS, EPS, PLAYLISTS) ---
+  async openCollection(itemOrId, type = 'album') {
+    this.switchTab('collection');
+    
+    const heroTitle = document.getElementById('collection-title');
+    const heroAuthor = document.getElementById('collection-author');
+    const heroYear = document.getElementById('collection-year');
+    const heroTrackCount = document.getElementById('collection-track-count');
+    const heroCover = document.getElementById('collection-cover-img');
+    const heroBadge = document.getElementById('collection-type-badge');
+    const heroDesc = document.getElementById('collection-description');
+    const editBtn = document.getElementById('collection-edit-btn');
+    const deleteBtn = document.getElementById('collection-delete-btn');
+    const table = document.getElementById('collection-tracks-table');
+    const hint = document.getElementById('collection-tracklist-hint');
+
+    let collectionData = null;
+    let isCustom = false;
+
+    // Check if itemOrId is an object or string
+    if (typeof itemOrId === 'object' && itemOrId !== null) {
+      if (itemOrId.id && String(itemOrId.id).startsWith('pl_')) {
+        collectionData = this.customPlaylists.find(p => p.id === itemOrId.id) || itemOrId;
+        isCustom = true;
+      } else {
+        collectionData = itemOrId;
       }
-    } catch (e) {
-      console.log('Play album error:', e);
+    } else if (typeof itemOrId === 'string') {
+      if (itemOrId.startsWith('pl_')) {
+        collectionData = this.customPlaylists.find(p => p.id === itemOrId);
+        isCustom = true;
+      }
     }
+
+    if (!collectionData || (!collectionData.tracks && collectionData.id)) {
+      heroTitle.innerText = 'Loading Collection...';
+      table.innerHTML = '<div class="empty-state"><p>Loading tracks...</p></div>';
+      
+      const id = typeof itemOrId === 'string' ? itemOrId : itemOrId.id;
+      const isPl = String(id).startsWith('VLPL') || String(id).startsWith('PL') || String(id).startsWith('RD') || type === 'playlist';
+      const endpoint = isPl ? `/api/playlist/${encodeURIComponent(id)}` : `/api/album/${encodeURIComponent(id)}`;
+
+      try {
+        const res = await fetch(endpoint);
+        const fetchedData = await res.json();
+        if (fetchedData.tracks) {
+          collectionData = Object.assign({}, collectionData, fetchedData);
+        }
+      } catch (e) {
+        console.error('Failed to fetch collection details:', e);
+      }
+    }
+
+    if (!collectionData) {
+      heroTitle.innerText = 'Collection not found';
+      table.innerHTML = '<div class="empty-state"><p>Could not load collection tracks.</p></div>';
+      return;
+    }
+
+    this.currentCollection = collectionData;
+    this.currentCollectionIsCustom = isCustom;
+
+    // Set UI Meta
+    heroTitle.innerText = collectionData.title || 'Untitled Collection';
+    heroCover.src = collectionData.cover || collectionData.thumbnail || (collectionData.tracks && collectionData.tracks[0] && collectionData.tracks[0].thumbnail) || '/assets/avatars/music.svg';
+    heroBadge.innerText = (isCustom ? 'CUSTOM PLAYLIST' : (collectionData.type || type)).toUpperCase();
+    heroAuthor.innerText = collectionData.artist || collectionData.author || 'Cord Player';
+    heroYear.innerText = collectionData.year ? `${collectionData.year}` : '';
+    heroYear.style.display = collectionData.year ? 'inline' : 'none';
+    heroDesc.innerText = collectionData.description || '';
+
+    const tracks = collectionData.tracks || [];
+    heroTrackCount.innerText = `${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'}`;
+
+    if (isCustom) {
+      if (editBtn) editBtn.style.display = 'inline-flex';
+      if (deleteBtn) deleteBtn.style.display = 'inline-flex';
+      if (hint) hint.innerText = 'Drag & drop any track row to reorder sequence';
+      heroAuthor.style.cursor = 'default';
+      heroAuthor.onclick = null;
+    } else {
+      if (editBtn) editBtn.style.display = 'none';
+      if (deleteBtn) deleteBtn.style.display = 'none';
+      if (hint) hint.innerText = 'Click any track to start playing';
+      heroAuthor.style.cursor = 'pointer';
+      heroAuthor.onclick = () => {
+        if (collectionData.artist && collectionData.artist !== 'Various Artists' && collectionData.artist !== 'Cord Player') {
+          this.openArtistProfile(collectionData.artist);
+        }
+      };
+    }
+
+    // Play All & Shuffle Buttons
+    const playAllBtn = document.getElementById('collection-play-all-btn');
+    if (playAllBtn) {
+      playAllBtn.onclick = () => {
+        if (tracks.length > 0) {
+          this.setQueue(tracks, 0);
+        }
+      };
+    }
+
+    const shuffleBtn = document.getElementById('collection-shuffle-btn');
+    if (shuffleBtn) {
+      shuffleBtn.onclick = () => {
+        if (tracks.length > 0) {
+          const shuffled = [...tracks].sort(() => Math.random() - 0.5);
+          this.setQueue(shuffled, 0);
+        }
+      };
+    }
+
+    // Render Track Table
+    this.renderCollectionTracklist(tracks, table, isCustom);
+  }
+
+  renderCollectionTracklist(tracks, table, isCustom) {
+    if (!table) return;
+    if (!tracks || tracks.length === 0) {
+      table.innerHTML = '<div class="empty-state" style="padding: 36px 12px;"><p>No tracks in this collection yet. Use "Add to Playlist..." from any song menu!</p></div>';
+      return;
+    }
+
+    table.innerHTML = '';
+    tracks.forEach((track, idx) => {
+      const row = document.createElement('div');
+      row.className = 'collection-track-row';
+      row.dataset.index = idx;
+      
+      const isDownloaded = this.downloads.some(d => d.id === track.id);
+      const ytFallback = (track.id && !track.id.startsWith('UC') && !track.id.startsWith('MP'))
+        ? `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`
+        : '/assets/avatars/music.svg';
+      const thumbSrc = track.thumbnail || ytFallback;
+
+      if (isCustom) {
+        row.draggable = true;
+      }
+
+      row.innerHTML = `
+        <div class="track-index-num">
+          ${isCustom ? '<span class="material-symbols-rounded track-drag-handle" title="Drag to reorder sequence">drag_indicator</span>' : (idx + 1)}
+        </div>
+        <img src="${thumbSrc}" class="track-thumb-cell" alt="${track.title}" onerror="this.onerror=null;this.src='${ytFallback}'">
+        <div class="track-meta-cell" style="overflow: hidden;">
+          <div class="track-title-text" title="${track.title}">${track.title}</div>
+          <div class="track-artist-text" title="${track.artist || ''}">${track.artist || 'Unknown Artist'}</div>
+        </div>
+        <div class="track-album-text">${track.album || ''}</div>
+        <div class="track-duration-text">${track.duration || '3:30'}</div>
+        <button class="icon-btn-small card-more-btn" title="More Options" style="position: static; opacity: 1;"><span class="material-symbols-rounded">more_vert</span></button>
+      `;
+
+      row.querySelector('.card-more-btn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.openContextMenu(e, track);
+      });
+
+      row.addEventListener('click', () => {
+        this.playTrack(track, [track, ...tracks.slice(idx + 1)]);
+      });
+
+      // DRAG AND DROP REORDERING FOR CUSTOM PLAYLISTS
+      if (isCustom) {
+        row.addEventListener('dragstart', (e) => {
+          this.draggedTrackIndex = idx;
+          row.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', String(idx));
+        });
+
+        row.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          row.classList.add('drag-over');
+        });
+
+        row.addEventListener('dragleave', () => {
+          row.classList.remove('drag-over');
+        });
+
+        row.addEventListener('drop', (e) => {
+          e.preventDefault();
+          row.classList.remove('drag-over');
+          const fromIndex = this.draggedTrackIndex;
+          const toIndex = idx;
+
+          if (fromIndex !== null && fromIndex !== undefined && fromIndex !== toIndex) {
+            this.reorderCustomPlaylistTracks(this.currentCollection.id, fromIndex, toIndex);
+          }
+        });
+
+        row.addEventListener('dragend', () => {
+          row.classList.remove('dragging');
+          document.querySelectorAll('.collection-track-row').forEach(r => r.classList.remove('drag-over'));
+          this.draggedTrackIndex = null;
+        });
+      }
+
+      table.appendChild(row);
+    });
+  }
+
+  reorderCustomPlaylistTracks(playlistId, fromIndex, toIndex) {
+    const pl = this.customPlaylists.find(p => p.id === playlistId);
+    if (!pl || !pl.tracks) return;
+
+    const [movedTrack] = pl.tracks.splice(fromIndex, 1);
+    pl.tracks.splice(toIndex, 0, movedTrack);
+
+    localStorage.setItem('cord_custom_playlists', JSON.stringify(this.customPlaylists));
+    this.renderCustomPlaylists();
+    this.openCollection(pl, 'playlist');
+  }
+
+  // --- ARTIST DISCOGRAPHY VIEW ---
+  async openArtistDiscography(artistDataOrId) {
+    this.switchTab('discography');
+    
+    const nameEl = document.getElementById('discography-artist-name');
+    const avatarEl = document.getElementById('discography-artist-avatar');
+    const grid = document.getElementById('discography-releases-grid');
+
+    nameEl.innerText = 'Loading Discography...';
+    grid.innerHTML = '<div class="empty-state"><p>Loading complete discography...</p></div>';
+
+    let artistId = typeof artistDataOrId === 'string' ? artistDataOrId : (artistDataOrId ? artistDataOrId.id || artistDataOrId.name : '');
+    let artistName = typeof artistDataOrId === 'object' && artistDataOrId ? artistDataOrId.name : artistId;
+    let avatar = typeof artistDataOrId === 'object' && artistDataOrId ? artistDataOrId.avatar : '';
+
+    if (avatar && avatarEl) avatarEl.src = avatar;
+
+    try {
+      const res = await fetch(`/api/artist/${encodeURIComponent(artistId)}/discography`);
+      const data = await res.json();
+      this.currentDiscography = data;
+
+      if (nameEl) nameEl.innerText = data.artist_name || artistName;
+      if (data.avatar && avatarEl) avatarEl.src = data.avatar;
+
+      this.renderDiscographyReleases('all');
+    } catch (e) {
+      console.error('Discography fetch error:', e);
+      if (this.currentArtistProfile) {
+        const albums = this.currentArtistProfile.albums || [];
+        const singles = this.currentArtistProfile.singles || [];
+        const all = [...albums, ...singles].sort((a, b) => (parseInt(b.year) || 0) - (parseInt(a.year) || 0));
+        this.currentDiscography = {
+          artist_name: this.currentArtistProfile.name,
+          avatar: this.currentArtistProfile.avatar,
+          all_releases: all,
+          albums: albums,
+          singles: singles
+        };
+        if (nameEl) nameEl.innerText = this.currentArtistProfile.name;
+        this.renderDiscographyReleases('all');
+      }
+    }
+  }
+
+  renderDiscographyReleases(filter = 'all') {
+    const grid = document.getElementById('discography-releases-grid');
+    if (!grid || !this.currentDiscography) return;
+
+    let items = [];
+    if (filter === 'album') items = this.currentDiscography.albums || [];
+    else if (filter === 'single') items = this.currentDiscography.singles || [];
+    else items = this.currentDiscography.all_releases || [];
+
+    if (!items || items.length === 0) {
+      grid.innerHTML = '<div class="empty-state"><p>No releases found for this category.</p></div>';
+      return;
+    }
+
+    grid.innerHTML = '';
+    items.forEach(rel => {
+      const card = document.createElement('div');
+      card.className = 'music-card';
+      const typeLabel = rel.category === 'single' ? 'Single / EP' : (rel.type || 'Album');
+      const yearLabel = rel.year ? ` • ${rel.year}` : '';
+
+      card.innerHTML = `
+        <div class="card-thumb-wrap">
+          <img src="${rel.thumbnail || this.currentDiscography.avatar || '/assets/avatars/music.svg'}" alt="${rel.title}" loading="lazy">
+          <span class="release-type-badge">${typeLabel}${yearLabel}</span>
+          <div class="card-play-overlay">
+            <button class="play-circle-btn"><span class="material-symbols-rounded">play_arrow</span></button>
+          </div>
+        </div>
+        <div class="card-info">
+          <div class="card-title" title="${rel.title}">${rel.title}</div>
+          <div class="card-artist">${this.currentDiscography.artist_name || ''}</div>
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        this.openCollection(rel, rel.category === 'single' ? 'single' : 'album');
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  // --- CUSTOM PLAYLISTS SYSTEM ---
+  renderCustomPlaylists() {
+    const container = document.getElementById('custom-playlists-grid');
+    if (!container) return;
+
+    if (!this.customPlaylists || this.customPlaylists.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="grid-column: 1 / -1; padding: 48px 20px; text-align: center;">
+          <span class="material-symbols-rounded" style="font-size: 48px; color: var(--text-dim); margin-bottom: 12px; display: block;">queue_music</span>
+          <h4 style="font-size: 1.1rem; margin-bottom: 6px; color: var(--text-main);">No Custom Playlists Yet</h4>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">Create personalized playlists with custom covers and drag-and-drop track sequencing.</p>
+          <button id="empty-create-pl-btn" class="btn-primary-pill" style="margin: 0 auto;">
+            <span class="material-symbols-rounded">add</span>
+            <span>Create Your First Playlist</span>
+          </button>
+        </div>
+      `;
+      document.getElementById('empty-create-pl-btn')?.addEventListener('click', () => {
+        this.openCreatePlaylistModal();
+      });
+      return;
+    }
+
+    container.innerHTML = '';
+    this.customPlaylists.forEach(pl => {
+      const card = document.createElement('div');
+      card.className = 'music-card';
+      const count = pl.tracks ? pl.tracks.length : 0;
+      const thumbSrc = pl.cover || (pl.tracks && pl.tracks[0] && pl.tracks[0].thumbnail) || '/assets/avatars/music.svg';
+
+      card.innerHTML = `
+        <div class="card-thumb-wrap">
+          <img src="${thumbSrc}" alt="${pl.title}" loading="lazy" onerror="this.onerror=null;this.src='/assets/avatars/music.svg'">
+          <span class="release-type-badge">${count} ${count === 1 ? 'Track' : 'Tracks'}</span>
+          <div class="card-play-overlay">
+            <button class="play-circle-btn"><span class="material-symbols-rounded">play_arrow</span></button>
+          </div>
+        </div>
+        <div class="card-info">
+          <div class="card-title" title="${pl.title}">${pl.title}</div>
+          <div class="card-artist">Custom Playlist • ${count} songs</div>
+        </div>
+      `;
+      card.querySelector('.play-circle-btn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (pl.tracks && pl.tracks.length > 0) {
+          this.setQueue(pl.tracks, 0);
+        } else {
+          this.openCollection(pl, 'playlist');
+        }
+      });
+      card.addEventListener('click', () => {
+        this.openCollection(pl, 'playlist');
+      });
+      container.appendChild(card);
+    });
+  }
+
+  initCustomPlaylistModals() {
+    // 1. Create Playlist Modal
+    document.getElementById('create-playlist-btn')?.addEventListener('click', () => {
+      this.openCreatePlaylistModal();
+    });
+
+    const createUrlInput = document.getElementById('new-playlist-cover-url');
+    const createFileInput = document.getElementById('new-playlist-cover-file');
+    const createPreview = document.getElementById('new-playlist-cover-preview');
+
+    createUrlInput?.addEventListener('input', (e) => {
+      if (createPreview) createPreview.src = e.target.value.trim() || '/assets/avatars/music.svg';
+    });
+
+    createFileInput?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file && createPreview) {
+        const reader = new FileReader();
+        reader.onload = (re) => {
+          createPreview.src = re.target.result;
+          if (createUrlInput) createUrlInput.value = '';
+          createPreview.dataset.base64 = re.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    document.getElementById('save-new-playlist-btn')?.addEventListener('click', () => {
+      const name = document.getElementById('new-playlist-name').value.trim();
+      if (!name) {
+        alert('Please enter a playlist name.');
+        return;
+      }
+      const cover = (createPreview && createPreview.dataset.base64) || (createUrlInput ? createUrlInput.value.trim() : '') || '';
+      
+      const newPlaylist = {
+        id: 'pl_' + Date.now(),
+        title: name,
+        cover: cover,
+        createdAt: Date.now(),
+        tracks: []
+      };
+
+      this.customPlaylists.unshift(newPlaylist);
+      localStorage.setItem('cord_custom_playlists', JSON.stringify(this.customPlaylists));
+      this.renderCustomPlaylists();
+      this.closeModal('modal-create-playlist');
+      this.openCollection(newPlaylist, 'playlist');
+    });
+
+    // 2. Edit Playlist Modal
+    document.getElementById('collection-edit-btn')?.addEventListener('click', () => {
+      if (!this.currentCollection || !this.currentCollection.id) return;
+      const pl = this.customPlaylists.find(p => p.id === this.currentCollection.id);
+      if (!pl) return;
+
+      document.getElementById('edit-playlist-name').value = pl.title || '';
+      const editPreview = document.getElementById('edit-playlist-cover-preview');
+      const editUrlInput = document.getElementById('edit-playlist-cover-url');
+      if (editPreview) {
+        editPreview.src = pl.cover || (pl.tracks && pl.tracks[0] && pl.tracks[0].thumbnail) || '/assets/avatars/music.svg';
+        delete editPreview.dataset.base64;
+      }
+      if (editUrlInput) {
+        editUrlInput.value = pl.cover && !pl.cover.startsWith('data:') ? pl.cover : '';
+      }
+
+      this.openModal('modal-edit-playlist');
+    });
+
+    const editUrlInput = document.getElementById('edit-playlist-cover-url');
+    const editFileInput = document.getElementById('edit-playlist-cover-file');
+    const editPreview = document.getElementById('edit-playlist-cover-preview');
+
+    editUrlInput?.addEventListener('input', (e) => {
+      if (editPreview) editPreview.src = e.target.value.trim() || '/assets/avatars/music.svg';
+    });
+
+    editFileInput?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file && editPreview) {
+        const reader = new FileReader();
+        reader.onload = (re) => {
+          editPreview.src = re.target.result;
+          if (editUrlInput) editUrlInput.value = '';
+          editPreview.dataset.base64 = re.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    document.getElementById('save-edit-playlist-btn')?.addEventListener('click', () => {
+      const name = document.getElementById('edit-playlist-name').value.trim();
+      if (!name) {
+        alert('Please enter a playlist name.');
+        return;
+      }
+      const pl = this.customPlaylists.find(p => p.id === this.currentCollection.id);
+      if (!pl) return;
+
+      pl.title = name;
+      if (editPreview && editPreview.dataset.base64) {
+        pl.cover = editPreview.dataset.base64;
+      } else if (editUrlInput && editUrlInput.value.trim()) {
+        pl.cover = editUrlInput.value.trim();
+      }
+
+      localStorage.setItem('cord_custom_playlists', JSON.stringify(this.customPlaylists));
+      this.renderCustomPlaylists();
+      this.closeModal('modal-edit-playlist');
+      this.openCollection(pl, 'playlist');
+    });
+
+    // Delete Playlist
+    document.getElementById('collection-delete-btn')?.addEventListener('click', () => {
+      if (!this.currentCollection) return;
+      if (confirm(`Are you sure you want to delete the playlist "${this.currentCollection.title}"?`)) {
+        this.customPlaylists = this.customPlaylists.filter(p => p.id !== this.currentCollection.id);
+        localStorage.setItem('cord_custom_playlists', JSON.stringify(this.customPlaylists));
+        this.renderCustomPlaylists();
+        this.switchTab('library');
+      }
+    });
+
+    // 3. Add To Playlist Modal
+    document.getElementById('quick-create-from-modal-btn')?.addEventListener('click', () => {
+      this.closeModal('modal-add-to-playlist');
+      this.openCreatePlaylistModal();
+    });
+
+    // Modal Close Buttons
+    document.querySelectorAll('[data-close]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const modalId = btn.dataset.close;
+        this.closeModal(modalId);
+      });
+    });
+
+    // Artist Discography Button
+    document.getElementById('artist-discography-btn')?.addEventListener('click', () => {
+      if (this.currentArtistProfile) {
+        this.openArtistDiscography(this.currentArtistProfile);
+      }
+    });
+
+    document.getElementById('discography-back-btn')?.addEventListener('click', () => {
+      this.switchTab('artist');
+    });
+
+    // Discography Filter Tabs
+    document.querySelectorAll('.disco-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('.disco-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        this.renderDiscographyReleases(pill.dataset.filter);
+      });
+    });
+  }
+
+  openCreatePlaylistModal() {
+    const nameInput = document.getElementById('new-playlist-name');
+    const urlInput = document.getElementById('new-playlist-cover-url');
+    if (nameInput) nameInput.value = '';
+    if (urlInput) urlInput.value = '';
+    const preview = document.getElementById('new-playlist-cover-preview');
+    if (preview) {
+      preview.src = '/assets/avatars/music.svg';
+      delete preview.dataset.base64;
+    }
+    this.openModal('modal-create-playlist');
+  }
+
+  openAddToPlaylistModal(track) {
+    const previewBox = document.getElementById('target-track-preview-box');
+    const pickList = document.getElementById('playlists-pick-list');
+    if (!previewBox || !pickList) return;
+    
+    const ytFallback = track.id ? `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg` : '/assets/avatars/music.svg';
+    previewBox.innerHTML = `
+      <img src="${track.thumbnail || ytFallback}" style="width: 44px; height: 44px; border-radius: var(--radius-sm); object-fit: cover;" alt="${track.title}">
+      <div style="overflow: hidden;">
+        <div style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${track.title}</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">${track.artist || 'Unknown Artist'}</div>
+      </div>
+    `;
+
+    if (!this.customPlaylists || this.customPlaylists.length === 0) {
+      pickList.innerHTML = `
+        <div style="text-align: center; padding: 18px 10px; color: var(--text-dim);">
+          No playlists created yet.<br>Click "New Playlist" below to make one!
+        </div>
+      `;
+    } else {
+      pickList.innerHTML = '';
+      this.customPlaylists.forEach(pl => {
+        const item = document.createElement('div');
+        item.className = 'playlist-pick-item';
+        const count = pl.tracks ? pl.tracks.length : 0;
+        const thumbSrc = pl.cover || (pl.tracks && pl.tracks[0] && pl.tracks[0].thumbnail) || '/assets/avatars/music.svg';
+        
+        item.innerHTML = `
+          <img src="${thumbSrc}" class="playlist-pick-thumb" alt="${pl.title}" onerror="this.onerror=null;this.src='/assets/avatars/music.svg'">
+          <div class="playlist-pick-title">${pl.title}</div>
+          <div class="playlist-pick-count">${count} tracks</div>
+        `;
+
+        item.addEventListener('click', () => {
+          if (!pl.tracks) pl.tracks = [];
+          const exists = pl.tracks.some(t => t.id === track.id);
+          if (exists) {
+            alert(`"${track.title}" is already in playlist "${pl.title}".`);
+          } else {
+            pl.tracks.push(track);
+            localStorage.setItem('cord_custom_playlists', JSON.stringify(this.customPlaylists));
+            this.renderCustomPlaylists();
+            this.closeModal('modal-add-to-playlist');
+            alert(`Added "${track.title}" to "${pl.title}"!`);
+          }
+        });
+
+        pickList.appendChild(item);
+      });
+    }
+
+    this.openModal('modal-add-to-playlist');
+  }
+
+  openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'flex';
+  }
+
+  closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
   }
 
   // --- RECOMMENDATIONS & EXPLORE ---
@@ -1543,6 +2160,9 @@ class CordPlayer {
 
     container.innerHTML = '';
     items.forEach((item, idx) => {
+      const isCollection = item.type === 'album' || item.type === 'playlist' || item.type === 'ep' || item.type === 'Single/EP' ||
+        (item.id && (String(item.id).startsWith('MPRE') || String(item.id).startsWith('OLAK') || String(item.id).startsWith('VLPL') || String(item.id).startsWith('PL') || String(item.id).startsWith('RD')));
+
       const isDownloaded = this.downloads.some(d => d.id === item.id);
       const ytFallback = (item.id && !item.id.startsWith('UC') && !item.id.startsWith('MP'))
         ? `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
@@ -1550,7 +2170,7 @@ class CordPlayer {
       const isEpisode = item.type === 'episode';
       const durationBadge = item.duration && item.duration !== '0:00' 
         ? `<span class="release-type-badge">${isEpisode ? '🎙️ ' : ''}${item.duration}</span>` 
-        : (isEpisode ? '<span class="release-type-badge">🎙️ Episode</span>' : '');
+        : (isEpisode ? '<span class="release-type-badge">🎙️ Episode</span>' : (isCollection ? `<span class="release-type-badge">${item.type || 'Album'}</span>` : ''));
 
       const card = document.createElement('div');
       card.className = 'music-card';
@@ -1566,7 +2186,7 @@ class CordPlayer {
         </div>
         <div class="card-info">
           <div class="card-title" title="${item.title}">${item.title}</div>
-          <div class="card-artist" title="Click to view details">${item.artist || 'Unknown Artist'}</div>
+          <div class="card-artist" title="Click to view details">${item.artist || item.author || (isCollection ? 'Album' : 'Unknown Artist')}</div>
         </div>
       `;
       card.querySelector('.card-more-btn')?.addEventListener('click', (e) => {
@@ -1577,9 +2197,22 @@ class CordPlayer {
         e.stopPropagation();
         if (item.artist) this.openArtistProfile(item.artist);
       });
-      card.addEventListener('click', () => {
-        this.playTrack(item, [item, ...items.slice(idx + 1)]);
-      });
+
+      if (isCollection) {
+        card.querySelector('.play-circle-btn')?.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await this.openCollection(item, item.type || 'album');
+          const playBtn = document.getElementById('collection-play-all-btn');
+          if (playBtn) playBtn.click();
+        });
+        card.addEventListener('click', () => {
+          this.openCollection(item, item.type || 'album');
+        });
+      } else {
+        card.addEventListener('click', () => {
+          this.playTrack(item, [item, ...items.slice(idx + 1)]);
+        });
+      }
       container.appendChild(card);
     });
   }

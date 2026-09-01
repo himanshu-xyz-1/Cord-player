@@ -330,11 +330,93 @@ class YTMusicService:
                 'artist': artist,
                 'year': year,
                 'thumbnail': thumb,
+                'type': 'Album',
                 'tracks': tracks
             }
         except Exception as e:
             print(f"[YTMusic] Album fetch error: {e}")
             return {'tracks': []}
+
+    def get_playlist(self, playlist_id: str) -> Dict[str, Any]:
+        """Fetch playlist details and tracks list."""
+        try:
+            # Handle playlist ID with or without VL prefix
+            clean_id = playlist_id.replace('VL', '') if playlist_id.startswith('VL') else playlist_id
+            pl = self.ytm.get_playlist(clean_id, limit=100)
+            title = pl.get('title', 'Playlist')
+            author = pl.get('author', {}).get('name', 'Cord Player') if isinstance(pl.get('author'), dict) else (pl.get('author') or 'Cord Player')
+            year = pl.get('year', '')
+            thumb = extract_thumbnail_url(pl)
+            track_count = pl.get('trackCount', 0)
+            description = pl.get('description', '')
+
+            tracks = []
+            for t in pl.get('tracks', []):
+                t_artists = [a.get('name') for a in t.get('artists', []) if isinstance(a, dict) and a.get('name')]
+                t_vid = t.get('videoId', '')
+                if not t_vid:
+                    continue
+                tracks.append({
+                    'id': t_vid,
+                    'title': t.get('title', 'Unknown Track'),
+                    'artist': ', '.join(t_artists) if t_artists else author,
+                    'duration': t.get('duration', '0:00'),
+                    'thumbnail': extract_thumbnail_url(t, t_vid) or thumb,
+                    'album': t.get('album', {}).get('name', title) if isinstance(t.get('album'), dict) else title
+                })
+            return {
+                'id': playlist_id,
+                'title': title,
+                'author': author,
+                'artist': author,
+                'year': year,
+                'description': description,
+                'track_count': track_count or len(tracks),
+                'thumbnail': thumb or (tracks[0].get('thumbnail') if tracks else ''),
+                'type': 'Playlist',
+                'tracks': tracks
+            }
+        except Exception as e:
+            print(f"[YTMusic] Playlist fetch error: {e}")
+            return {'tracks': []}
+
+    def get_artist_discography(self, artist_id_or_name: str) -> Dict[str, Any]:
+        """Fetch complete discography (albums, EPs, singles, top songs) sorted from newest to oldest."""
+        artist_data = self.get_artist(artist_id_or_name)
+        albums = artist_data.get('albums', [])
+        singles = artist_data.get('singles', [])
+        
+        all_releases = []
+        for a in albums:
+            a_copy = dict(a)
+            a_copy['category'] = 'album'
+            all_releases.append(a_copy)
+        for s in singles:
+            s_copy = dict(s)
+            s_copy['category'] = 'single'
+            all_releases.append(s_copy)
+
+        def parse_year(item):
+            y_str = str(item.get('year', '')).strip()
+            digits = ''.join([c for c in y_str if c.isdigit()])
+            try:
+                return int(digits) if digits else 0
+            except Exception:
+                return 0
+
+        # Sort all releases from latest/newest to oldest
+        all_releases.sort(key=parse_year, reverse=True)
+        albums_sorted = [r for r in all_releases if r.get('category') == 'album']
+        singles_sorted = [r for r in all_releases if r.get('category') == 'single']
+
+        return {
+            'artist_name': artist_data.get('name', artist_id_or_name),
+            'avatar': artist_data.get('avatar', ''),
+            'all_releases': all_releases,
+            'albums': albums_sorted,
+            'singles': singles_sorted,
+            'top_songs': artist_data.get('top_songs', [])
+        }
 
     def get_stream_url(self, video_id: str) -> Dict[str, Any]:
         """Extract direct audio stream URL with caching."""

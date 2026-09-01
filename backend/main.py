@@ -62,10 +62,22 @@ async def get_artist_profile(artist_id: str):
     data = await loop.run_in_executor(None, yt_service.get_artist, artist_id)
     return data
 
+@app.get("/api/artist/{artist_id}/discography")
+async def get_artist_discography(artist_id: str):
+    loop = asyncio.get_event_loop()
+    data = await loop.run_in_executor(None, yt_service.get_artist_discography, artist_id)
+    return data
+
 @app.get("/api/album/{album_id}")
 async def get_album_details(album_id: str):
     loop = asyncio.get_event_loop()
     data = await loop.run_in_executor(None, yt_service.get_album, album_id)
+    return data
+
+@app.get("/api/playlist/{playlist_id}")
+async def get_playlist_details(playlist_id: str):
+    loop = asyncio.get_event_loop()
+    data = await loop.run_in_executor(None, yt_service.get_playlist, playlist_id)
     return data
 
 @app.get("/api/stream/{video_id}")

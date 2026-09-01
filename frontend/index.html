@@ -380,7 +380,11 @@
               <span class="subtitle">Your saved favorites, offline downloads, playlists, and history</span>
             </div>
             <div class="library-subnav-pills">
-              <button class="lib-pill active" data-sub="favorites">
+              <button class="lib-pill active" data-sub="playlists">
+                <span class="material-symbols-rounded">queue_music</span>
+                <span>Playlists</span>
+              </button>
+              <button class="lib-pill" data-sub="favorites">
                 <span class="material-symbols-rounded">favorite</span>
                 <span>Favorites</span>
               </button>
@@ -405,8 +409,23 @@
 
           <!-- Library Sub-Sections -->
           <div class="library-sub-content">
+            <!-- Subsection: Custom Playlists -->
+            <div id="lib-sec-playlists" class="lib-panel active">
+              <div class="section-header">
+                <div class="header-title-box">
+                  <h3>Your Custom Playlists</h3>
+                  <span class="subtitle">Custom collections with custom covers and drag & drop track reordering</span>
+                </div>
+                <button id="create-playlist-btn" class="btn-primary-pill">
+                  <span class="material-symbols-rounded">add</span>
+                  <span>New Playlist</span>
+                </button>
+              </div>
+              <div id="custom-playlists-grid" class="cards-grid"></div>
+            </div>
+
             <!-- Subsection: Favorites -->
-            <div id="lib-sec-favorites" class="lib-panel active">
+            <div id="lib-sec-favorites" class="lib-panel">
               <div class="section-header">
                 <div class="header-title-box">
                   <h3>Favorite Tracks</h3>
@@ -501,6 +520,10 @@
               <h3>Latest Releases</h3>
               <span class="subtitle">Newest singles, EPs, and albums sorted by release date</span>
             </div>
+            <button id="artist-discography-btn" class="btn-white-pill">
+              <span class="material-symbols-rounded">library_music</span>
+              <span>See Full Discography</span>
+            </button>
           </div>
           <div id="artist-latest-releases-grid" class="cards-grid">
             <!-- Dynamically populated -->
@@ -548,6 +571,84 @@
           </div>
           <div id="artist-related-grid" class="cards-grid">
             <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- 5. COLLECTION VIEW (Full Album / EP / Custom Playlist Details View) -->
+        <div id="view-collection" class="tab-view">
+          <!-- Collection Hero Card -->
+          <div class="collection-hero-card">
+            <div class="collection-art-wrap">
+              <img id="collection-cover-img" src="/assets/avatars/music.svg" alt="Cover Art">
+            </div>
+            <div class="collection-meta-wrap">
+              <span id="collection-type-badge" class="collection-type-badge">ALBUM</span>
+              <h1 id="collection-title">Collection Title</h1>
+              <div class="collection-subtext">
+                <span id="collection-author" class="collection-author-link">Artist Name</span>
+                <span class="meta-dot">•</span>
+                <span id="collection-year">2024</span>
+                <span class="meta-dot">•</span>
+                <span id="collection-track-count">0 tracks</span>
+              </div>
+              <p id="collection-description" class="collection-desc"></p>
+              <div class="collection-btn-row">
+                <button id="collection-play-all-btn" class="btn-primary-pill">
+                  <span class="material-symbols-rounded">play_arrow</span>
+                  <span>Play All</span>
+                  <span class="pill-circle-icon"><span class="material-symbols-rounded">arrow_forward</span></span>
+                </button>
+                <button id="collection-shuffle-btn" class="btn-white-pill">
+                  <span class="material-symbols-rounded">shuffle</span>
+                  <span>Shuffle</span>
+                </button>
+                <button id="collection-edit-btn" class="btn-white-pill" style="display: none;">
+                  <span class="material-symbols-rounded">edit</span>
+                  <span>Edit Playlist</span>
+                </button>
+                <button id="collection-delete-btn" class="btn-white-pill" style="display: none; color: var(--primary);">
+                  <span class="material-symbols-rounded">delete</span>
+                  <span>Delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Collection Tracks Table -->
+          <div class="section-header" style="margin-top: 32px;">
+            <div class="header-title-box">
+              <h3>Tracklist</h3>
+              <span id="collection-tracklist-hint" class="subtitle">Click any track to start playing</span>
+            </div>
+          </div>
+          <div id="collection-tracks-table" class="collection-table">
+            <!-- Dynamically populated track rows with drag-and-drop reordering -->
+          </div>
+        </div>
+
+        <!-- 6. DISCOGRAPHY VIEW (Artist Full Discography from Latest to Oldest) -->
+        <div id="view-discography" class="tab-view">
+          <div class="discography-header-card">
+            <button id="discography-back-btn" class="btn-white-pill" style="margin-bottom: 16px;">
+              <span class="material-symbols-rounded">arrow_back</span>
+              <span>Back to Artist</span>
+            </button>
+            <div class="discography-title-row">
+              <img id="discography-artist-avatar" src="/assets/avatars/default.svg" class="artist-thumb-disc" alt="Artist">
+              <div>
+                <h1 id="discography-artist-name">Artist Name</h1>
+                <span class="subtitle">Complete Discography • Sorted from Latest to Oldest</span>
+              </div>
+            </div>
+            <!-- Filter Tabs -->
+            <div class="discography-filter-pills">
+              <button class="disco-pill active" data-filter="all">All Releases</button>
+              <button class="disco-pill" data-filter="album">Albums</button>
+              <button class="disco-pill" data-filter="single">Singles & EPs</button>
+            </div>
+          </div>
+          <div id="discography-releases-grid" class="cards-grid" style="margin-top: 24px;">
+            <!-- Dynamically populated releases -->
           </div>
         </div>
 
@@ -1254,6 +1355,10 @@
         <span class="material-symbols-rounded">queue_music</span>
         <span>Add to Queue</span>
       </button>
+      <button class="context-item" data-action="add-to-playlist">
+        <span class="material-symbols-rounded">playlist_add</span>
+        <span>Add to Playlist...</span>
+      </button>
       <button class="context-item" data-action="favorite">
         <span class="material-symbols-rounded">favorite</span>
         <span>Add to Favorites</span>
@@ -1266,6 +1371,114 @@
         <span class="material-symbols-rounded">person</span>
         <span>View Artist Profile</span>
       </button>
+    </div>
+
+    <!-- 1. CREATE PLAYLIST MODAL -->
+    <div id="modal-create-playlist" class="modal-backdrop" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Create New Playlist</h3>
+          <button class="modal-close-btn" data-close="modal-create-playlist">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-form-group">
+            <label>Playlist Name</label>
+            <input type="text" id="new-playlist-name" class="modal-input" placeholder="My Awesome Mix..." maxlength="60">
+          </div>
+          <div class="modal-form-group">
+            <label>Custom Cover Image (Optional)</label>
+            <div class="cover-input-flex">
+              <div class="cover-preview-box">
+                <img id="new-playlist-cover-preview" src="/assets/avatars/music.svg" alt="Preview">
+              </div>
+              <div class="cover-actions-col">
+                <input type="text" id="new-playlist-cover-url" class="modal-input" placeholder="Paste image URL (https://...)">
+                <label class="btn-white-pill file-upload-label">
+                  <span class="material-symbols-rounded">upload</span>
+                  <span>Upload Image File</span>
+                  <input type="file" id="new-playlist-cover-file" accept="image/*" style="display: none;">
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-white-pill" data-close="modal-create-playlist">Cancel</button>
+          <button id="save-new-playlist-btn" class="btn-primary-pill">
+            <span class="material-symbols-rounded">check</span>
+            <span>Create Playlist</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. EDIT PLAYLIST MODAL (Rename & Custom Cover) -->
+    <div id="modal-edit-playlist" class="modal-backdrop" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Edit Playlist Details</h3>
+          <button class="modal-close-btn" data-close="modal-edit-playlist">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-form-group">
+            <label>Playlist Name</label>
+            <input type="text" id="edit-playlist-name" class="modal-input" placeholder="Playlist Name..." maxlength="60">
+          </div>
+          <div class="modal-form-group">
+            <label>Change Cover Image</label>
+            <div class="cover-input-flex">
+              <div class="cover-preview-box">
+                <img id="edit-playlist-cover-preview" src="/assets/avatars/music.svg" alt="Preview">
+              </div>
+              <div class="cover-actions-col">
+                <input type="text" id="edit-playlist-cover-url" class="modal-input" placeholder="Paste image URL (https://...)">
+                <label class="btn-white-pill file-upload-label">
+                  <span class="material-symbols-rounded">upload</span>
+                  <span>Upload Image File</span>
+                  <input type="file" id="edit-playlist-cover-file" accept="image/*" style="display: none;">
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-white-pill" data-close="modal-edit-playlist">Cancel</button>
+          <button id="save-edit-playlist-btn" class="btn-primary-pill">
+            <span class="material-symbols-rounded">save</span>
+            <span>Save Changes</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. ADD TO PLAYLIST MODAL -->
+    <div id="modal-add-to-playlist" class="modal-backdrop" style="display: none;">
+      <div class="modal-card" style="max-width: 440px;">
+        <div class="modal-header">
+          <h3>Add Track to Playlist</h3>
+          <button class="modal-close-btn" data-close="modal-add-to-playlist">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="modal-body" style="padding-bottom: 8px;">
+          <div id="target-track-preview-box" class="target-track-preview"></div>
+          <div class="modal-subtitle-text">Select a playlist:</div>
+          <div id="playlists-pick-list" class="playlists-pick-list">
+            <!-- Dynamically populated playlists -->
+          </div>
+        </div>
+        <div class="modal-footer" style="justify-content: space-between;">
+          <button id="quick-create-from-modal-btn" class="btn-white-pill">
+            <span class="material-symbols-rounded">add</span>
+            <span>New Playlist</span>
+          </button>
+          <button class="btn-white-pill" data-close="modal-add-to-playlist">Close</button>
+        </div>
+      </div>
     </div>
 
     <!-- Direct Native Audio Element -->
