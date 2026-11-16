@@ -24,8 +24,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
-ASSETS_DIR = Path(__file__).parent.parent / "assets"
+if getattr(sys, 'frozen', False):
+    BASE_DIR = Path(sys._MEIPASS)
+else:
+    BASE_DIR = Path(__file__).parent.parent
+
+FRONTEND_DIR = BASE_DIR / "frontend"
+ASSETS_DIR = BASE_DIR / "assets"
 MUSIC_DIR = Path.home() / "Music" / "Cord"
 MUSIC_DIR.mkdir(parents=True, exist_ok=True)
 INDEX_FILE = MUSIC_DIR / "library.json"

@@ -10,10 +10,22 @@ import webbrowser
 from pathlib import Path
 
 # Ensure project root is in sys.path and is current working directory
-PROJECT_ROOT = Path(__file__).resolve().parent
+if getattr(sys, 'frozen', False):
+    PROJECT_ROOT = Path(sys._MEIPASS)
+else:
+    PROJECT_ROOT = Path(__file__).resolve().parent
+
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 os.chdir(str(PROJECT_ROOT))
+
+# Windows App ID so Taskbar / Task Manager shows Cord Player
+if sys.platform == "win32":
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("LordsIndeed.CordPlayer.Desktop.2.5")
+    except Exception:
+        pass
 
 # Fix for pythonw.exe (no console allocated -> sys.stdout and sys.stderr are None)
 if sys.stdout is None or sys.stderr is None:
