@@ -30,6 +30,24 @@ from backend.main import app
 
 PORT = 8765
 
+def acquire_single_instance_lock():
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            user32 = ctypes.windll.user32
+            mutex = kernel32.CreateMutexW(None, False, "CordPlayerSingleInstanceMutex")
+            if kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+                hwnd = user32.FindWindowW(None, "Cord Player")
+                if hwnd:
+                    user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+                    user32.SetForegroundWindow(hwnd)
+                return None
+            return mutex
+        except Exception:
+            pass
+    return True
+
 def is_port_in_use(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('127.0.0.1', port)) == 0
@@ -67,7 +85,7 @@ class WindowAPI:
 def launch_pywebview(url: str):
     import webview
 
-    wv_data_dir = str(Path.home() / ".config" / "cord-player-webview")
+    wv_data_dir = str(Path.home() / "AppData" / "Local" / "CordPlayer" / "webview")
     os.makedirs(wv_data_dir, exist_ok=True)
     os.environ['WEBVIEW2_USER_DATA_FOLDER'] = wv_data_dir
 
@@ -87,7 +105,7 @@ def launch_pywebview(url: str):
         frameless=True,
         easy_drag=False,
         shadow=True,
-        background_color='#0E0E10'
+        background_color='#ECECF2'
     )
     api.set_window(window)
 
@@ -177,6 +195,10 @@ def launch_window():
     webbrowser.open(url)
 
 def main():
+    mutex = acquire_single_instance_lock()
+    if mutex is None:
+        sys.exit(0)
+
     if not is_port_in_use(PORT):
         server_thread = threading.Thread(target=start_server, daemon=True)
         server_thread.start()
