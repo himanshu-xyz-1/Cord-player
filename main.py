@@ -70,22 +70,31 @@ def start_server():
 class WindowAPI:
     def __init__(self):
         self._window = None
+        self._is_maximized = False
 
     def set_window(self, window):
         self._window = window
+
+    def is_maximized(self):
+        if self._window and hasattr(self._window, 'native') and hasattr(self._window.native, 'WindowState'):
+            return str(self._window.native.WindowState) == 'Maximized'
+        return self._is_maximized
 
     def minimize(self):
         if self._window:
             self._window.minimize()
 
     def maximize(self):
-        if self._window:
-            if getattr(self._window, 'maximized', False):
-                self._window.restore()
-                return False
-            else:
-                self._window.maximize()
-                return True
+        if not self._window:
+            return False
+        if self.is_maximized():
+            self._window.restore()
+            self._is_maximized = False
+            return False
+        else:
+            self._window.maximize()
+            self._is_maximized = True
+            return True
 
     def close(self):
         if self._window:
@@ -93,6 +102,32 @@ class WindowAPI:
 
     def is_standalone(self):
         return True
+
+def make_window_resizable(title: str):
+    if sys.platform != "win32":
+        return
+    import ctypes
+    GWL_STYLE = -16
+    WS_THICKFRAME = 0x00040000
+    WS_MINIMIZEBOX = 0x00020000
+    WS_MAXIMIZEBOX = 0x00010000
+    SWP_NOMOVE = 0x0002
+    SWP_NOSIZE = 0x0001
+    SWP_NOZORDER = 0x0004
+    SWP_FRAMECHANGED = 0x0020
+
+    for _ in range(25):
+        time.sleep(0.1)
+        hwnd = ctypes.windll.user32.FindWindowW(None, title)
+        if hwnd:
+            style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_STYLE)
+            style |= WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX
+            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_STYLE, style)
+            ctypes.windll.user32.SetWindowPos(
+                hwnd, 0, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED
+            )
+            break
 
 def launch_pywebview(url: str):
     import webview
@@ -131,12 +166,14 @@ def launch_pywebview(url: str):
     api.set_window(window)
 
     def on_maximized():
+        api._is_maximized = True
         try:
             window.evaluate_js("document.body.classList.add('is-maximized'); var el = document.getElementById('win-max-icon'); if (el) el.innerText = 'filter_none';")
         except Exception:
             pass
 
     def on_restored():
+        api._is_maximized = False
         try:
             window.evaluate_js("document.body.classList.remove('is-maximized'); var el = document.getElementById('win-max-icon'); if (el) el.innerText = 'crop_square';")
         except Exception:
@@ -144,6 +181,8 @@ def launch_pywebview(url: str):
 
     window.events.maximized += on_maximized
     window.events.restored += on_restored
+
+    threading.Thread(target=make_window_resizable, args=("Cord Player",), daemon=True).start()
 
     webview.start(gui='edgechromium', private_mode=False, storage_path=wv_data_dir)
 
