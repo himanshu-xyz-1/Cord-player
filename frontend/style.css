@@ -371,7 +371,7 @@ body.theme-dark .nav-item:hover {
 .top-header {
   height: 72px;
   min-height: 72px;
-  padding: 0 32px;
+  padding: 0 16px 0 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2696,4 +2696,70 @@ body.theme-dark .slider-wrapper {
   border-radius: var(--radius-md);
   border: 1px solid var(--border-glass);
   margin-bottom: 12px;
+}
+
+/* --- STANDALONE FRAMELESS WINDOW CONTROLS & DRAG REGION --- */
+.top-header, .sidebar-header {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.search-bar-container,
+.header-actions button,
+.sidebar-header button,
+.sidebar nav,
+.pinned-artists-section,
+.sidebar-visualizer-box,
+.window-controls {
+  -webkit-app-region: no-drag;
+}
+
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border-glass, rgba(0, 0, 0, 0.1));
+}
+
+.win-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted, #71717A);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-app-region: no-drag;
+}
+
+.win-btn span {
+  font-size: 18px;
+}
+
+.win-btn:hover {
+  background: var(--hover-glass, rgba(0, 0, 0, 0.08));
+  color: var(--text-main, #18181B);
+}
+
+.win-btn.win-close:hover {
+  background: #FF0D2E !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(255, 13, 46, 0.4);
+}
+
+/* Frameless Window Curves */
+body.frameless-mode {
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px var(--border-glass, rgba(255, 255, 255, 0.08));
+}
+
+body.frameless-mode.is-maximized {
+  border-radius: 0;
+  box-shadow: none;
 }

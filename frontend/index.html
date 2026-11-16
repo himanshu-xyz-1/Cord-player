@@ -16,7 +16,7 @@
     <!-- Left Clean & Music-Focused Sidebar -->
     <aside class="sidebar">
       <!-- Top Brand Logo + Settings Gear -->
-      <div class="sidebar-header">
+      <div class="sidebar-header pywebview-drag-region">
         <div class="brand" id="brand-home-btn" title="Home / Made For You">
           <div class="brand-icon">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
@@ -78,7 +78,7 @@
     <!-- Main Content Area -->
     <main class="main-content">
       <!-- Top Search & Quick Actions Header -->
-      <header class="top-header">
+      <header class="top-header pywebview-drag-region">
         <div class="search-bar-container" id="top-search-box">
           <span class="material-symbols-rounded search-icon">search</span>
           <input type="text" id="global-search-input" placeholder="Search songs, artists, albums, or playlists..." autocomplete="off">
@@ -103,6 +103,18 @@
           <button id="header-settings-btn" class="icon-btn" title="Settings">
             <span class="material-symbols-rounded">settings</span>
           </button>
+          <!-- Standalone Native Window Controls -->
+          <div class="window-controls" id="app-window-controls">
+            <button id="win-min-btn" class="win-btn win-min" title="Minimize">
+              <span class="material-symbols-rounded">remove</span>
+            </button>
+            <button id="win-max-btn" class="win-btn win-max" title="Maximize">
+              <span class="material-symbols-rounded" id="win-max-icon">crop_square</span>
+            </button>
+            <button id="win-close-btn" class="win-btn win-close" title="Close">
+              <span class="material-symbols-rounded">close</span>
+            </button>
+          </div>
         </div>
       </header>
 

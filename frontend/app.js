@@ -171,6 +171,60 @@ class CordPlayer {
   }
 
   initEvents() {
+    // Frameless Native Window Controls
+    document.body.classList.add('frameless-mode');
+    
+    const callNativeAPI = async (method) => {
+      try {
+        if (window.pywebview && window.pywebview.api && typeof window.pywebview.api[method] === 'function') {
+          return await window.pywebview.api[method]();
+        }
+      } catch (err) {
+        console.warn(`Native API ${method} error:`, err);
+      }
+    };
+
+    document.getElementById('win-min-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callNativeAPI('minimize');
+    });
+
+    document.getElementById('win-max-btn')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const isMax = await callNativeAPI('maximize');
+      const maxIcon = document.getElementById('win-max-icon');
+      if (maxIcon && typeof isMax === 'boolean') {
+        maxIcon.innerText = isMax ? 'filter_none' : 'crop_square';
+      }
+      if (isMax === true) {
+        document.body.classList.add('is-maximized');
+      } else if (isMax === false) {
+        document.body.classList.remove('is-maximized');
+      }
+    });
+
+    document.getElementById('win-close-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callNativeAPI('close');
+    });
+
+    // Double click header to maximize / restore
+    document.querySelectorAll('.top-header, .sidebar-header').forEach(header => {
+      header.addEventListener('dblclick', async (e) => {
+        if (e.target.closest('button, input, a, .search-bar-container, .window-controls')) return;
+        const isMax = await callNativeAPI('maximize');
+        const maxIcon = document.getElementById('win-max-icon');
+        if (maxIcon && typeof isMax === 'boolean') {
+          maxIcon.innerText = isMax ? 'filter_none' : 'crop_square';
+        }
+        if (isMax === true) {
+          document.body.classList.add('is-maximized');
+        } else if (isMax === false) {
+          document.body.classList.remove('is-maximized');
+        }
+      });
+    });
+
     // 3 Main Nav tabs
     this.navItems.forEach(btn => {
       btn.addEventListener('click', () => {

@@ -8,6 +8,23 @@ import subprocess
 import shutil
 import webbrowser
 from pathlib import Path
+
+# Ensure project root is in sys.path and is current working directory
+PROJECT_ROOT = Path(__file__).resolve().parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+os.chdir(str(PROJECT_ROOT))
+
+# Fix for pythonw.exe (no console allocated -> sys.stdout and sys.stderr are None)
+if sys.stdout is None or sys.stderr is None:
+    log_dir = Path.home() / ".config" / "cord-player"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    _log_f = open(log_dir / "cord-player.log", "a", encoding="utf-8", buffering=1)
+    if sys.stdout is None:
+        sys.stdout = _log_f
+    if sys.stderr is None:
+        sys.stderr = _log_f
+
 import uvicorn
 from backend.main import app
 
@@ -19,6 +36,77 @@ def is_port_in_use(port: int) -> bool:
 
 def start_server():
     uvicorn.run(app, host="127.0.0.1", port=PORT, log_level="warning")
+
+class WindowAPI:
+    def __init__(self):
+        self._window = None
+
+    def set_window(self, window):
+        self._window = window
+
+    def minimize(self):
+        if self._window:
+            self._window.minimize()
+
+    def maximize(self):
+        if self._window:
+            if getattr(self._window, 'maximized', False):
+                self._window.restore()
+                return False
+            else:
+                self._window.maximize()
+                return True
+
+    def close(self):
+        if self._window:
+            self._window.destroy()
+
+    def is_standalone(self):
+        return True
+
+def launch_pywebview(url: str):
+    import webview
+
+    wv_data_dir = str(Path.home() / ".config" / "cord-player-webview")
+    os.makedirs(wv_data_dir, exist_ok=True)
+    os.environ['WEBVIEW2_USER_DATA_FOLDER'] = wv_data_dir
+
+    webview.settings['ALLOW_DOWNLOADS'] = True
+    webview.settings['OPEN_EXTERNAL_LINKS_IN_BROWSER'] = True
+    webview.settings['DRAG_REGION_SELECTOR'] = '.pywebview-drag-region'
+
+    api = WindowAPI()
+    window = webview.create_window(
+        title="Cord Player",
+        url=url,
+        js_api=api,
+        width=1280,
+        height=840,
+        min_size=(960, 640),
+        resizable=True,
+        frameless=True,
+        easy_drag=False,
+        shadow=True,
+        background_color='#0E0E10'
+    )
+    api.set_window(window)
+
+    def on_maximized():
+        try:
+            window.evaluate_js("document.body.classList.add('is-maximized'); var el = document.getElementById('win-max-icon'); if (el) el.innerText = 'filter_none';")
+        except Exception:
+            pass
+
+    def on_restored():
+        try:
+            window.evaluate_js("document.body.classList.remove('is-maximized'); var el = document.getElementById('win-max-icon'); if (el) el.innerText = 'crop_square';")
+        except Exception:
+            pass
+
+    window.events.maximized += on_maximized
+    window.events.restored += on_restored
+
+    webview.start(gui='edgechromium', private_mode=False, storage_path=wv_data_dir)
 
 def get_browser_command(url: str):
     user_data = Path.home() / ".config" / "cord-player"
@@ -71,6 +159,14 @@ def get_browser_command(url: str):
 
 def launch_window():
     url = f"http://127.0.0.1:{PORT}"
+    try:
+        launch_pywebview(url)
+        return
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"[Cord Player] pywebview failed ({e}), falling back to browser window...")
+
     cmd = get_browser_command(url)
     if cmd:
         try:
@@ -87,6 +183,7 @@ def main():
         time.sleep(0.8)
 
     launch_window()
+    os._exit(0)
 
 if __name__ == "__main__":
     main()
