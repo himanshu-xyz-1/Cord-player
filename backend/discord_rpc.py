@@ -2,7 +2,7 @@ import time
 import asyncio
 from typing import Optional
 
-DISCORD_CLIENT_ID = "1186714088923058226" # Cord Music Player Client ID
+DISCORD_CLIENT_ID = "1571886255099220048" # Cord Music Player Client ID
 
 class DiscordRPC:
     def __init__(self):
@@ -19,11 +19,11 @@ class DiscordRPC:
             self.rpc = Presence(DISCORD_CLIENT_ID)
             self.rpc.connect()
             self.connected = True
-            print("[Discord RPC] Connected successfully!")
+            print(f"[Discord RPC] Connected successfully to Cord Player ({DISCORD_CLIENT_ID})!")
         except Exception as e:
             self.connected = False
             self.rpc = None
-            # Discord not running or pipe not ready, will retry on updates
+            print(f"[Discord RPC] Connection failed or Discord not open: {e}")
 
     def update(self, title: str, artist: str, duration: int = 0, position: int = 0, is_playing: bool = True, thumbnail: str = ""):
         if not self.connected:
@@ -39,20 +39,26 @@ class DiscordRPC:
             activity = {
                 "details": f"{title[:128]}",
                 "state": f"by {artist[:128]}" if artist else "Cord Player",
-                "large_image": thumbnail if thumbnail.startswith("http") else "cord_logo",
-                "large_text": "Cord Player",
-                "small_image": "play" if is_playing else "pause",
-                "small_text": "Playing" if is_playing else "Paused"
+                "large_text": "Cord Player"
             }
 
-            if is_playing and start_time:
-                activity["start"] = start_time
-                if end_time and end_time > start_time:
-                    activity["end"] = end_time
+            if thumbnail and thumbnail.startswith("http"):
+                activity["large_image"] = thumbnail
+
+            if is_playing:
+                activity["small_image"] = "play"
+                activity["small_text"] = "Playing"
+                if start_time:
+                    activity["start"] = start_time
+                    if end_time and end_time > start_time:
+                        activity["end"] = end_time
+            else:
+                activity["small_image"] = "pause"
+                activity["small_text"] = "Paused"
 
             self.rpc.update(**activity)
         except Exception as e:
-            # Reconnect next time if pipe was broken
+            print(f"[Discord RPC Update Error] {e}")
             self.connected = False
             self.rpc = None
 
