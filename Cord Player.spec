@@ -1,12 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_data_files
 
+datas = [('frontend', 'frontend'), ('assets', 'assets'), ('backend', 'backend')]
+datas += collect_data_files('ytmusicapi')
+datas += collect_data_files('yt_dlp')
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('frontend', 'frontend'), ('assets', 'assets'), ('backend', 'backend')],
-    hiddenimports=[],
+    datas=datas,
+    hiddenimports=['uvicorn.logging', 'uvicorn.loops', 'uvicorn.loops.auto', 'uvicorn.protocols', 'uvicorn.protocols.http', 'uvicorn.protocols.http.auto', 'uvicorn.protocols.websockets', 'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan', 'uvicorn.lifespan.on', 'pypresence', 'ytmusicapi', 'yt_dlp'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
