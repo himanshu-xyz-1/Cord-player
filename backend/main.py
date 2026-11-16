@@ -219,6 +219,13 @@ async def clear_discord_rpc():
     discord_rpc.clear()
     return {"status": "cleared"}
 
+@app.get("/api/new_releases")
+async def get_new_releases_endpoint(filter: str = "all", pinned: str = ""):
+    loop = asyncio.get_event_loop()
+    pinned_list = [p.strip() for p in pinned.split(",") if p.strip()] if pinned else []
+    data = await loop.run_in_executor(None, yt_service.get_new_releases, filter, pinned_list)
+    return {"releases": data}
+
 @app.get("/api/downloads")
 async def list_downloads():
     lib = get_local_library()

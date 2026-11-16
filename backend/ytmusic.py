@@ -41,8 +41,8 @@ class YTMusicService:
         }
 
     def search(self, query: str, filter_type: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Search YouTube Music for songs, albums, artists, or playlists."""
-        valid_filters = ['songs', 'videos', 'albums', 'artists', 'playlists']
+        """Search YouTube Music for songs, albums, artists, playlists, episodes, or podcasts."""
+        valid_filters = ['songs', 'videos', 'albums', 'artists', 'playlists', 'episodes', 'podcasts']
         f = filter_type if filter_type in valid_filters else 'songs'
         try:
             results = self.ytm.search(query, filter=f)
@@ -577,5 +577,81 @@ class YTMusicService:
         except Exception as e:
             print(f"[YTMusic] Podcasts fetch error: {e}")
             return {"episodes": [], "shows": []}
+
+    def get_new_releases(self, filter_type: str = 'all', pinned_artists: List[str] = None) -> List[Dict[str, Any]]:
+        """Fetch latest releases (Singles, EPs, Albums) with optional filtering by type or pinned artists."""
+        results = []
+        try:
+            if filter_type == 'pinned' and pinned_artists:
+                for artist_name in pinned_artists[:6]:
+                    if not artist_name:
+                        continue
+                    try:
+                        artist_data = self.get_artist(artist_name)
+                        latest = artist_data.get('latest_releases', [])
+                        if latest:
+                            for item in latest[:3]:
+                                results.append({
+                                    'id': item.get('id', ''),
+                                    'browseId': item.get('id', ''),
+                                    'title': item.get('title', 'Unknown Release'),
+                                    'artist': artist_name,
+                                    'type': item.get('type', 'Release'),
+                                    'year': item.get('year', ''),
+                                    'thumbnail': item.get('thumbnail', '')
+                                })
+                    except Exception as e:
+                        print(f"[YTMusic] Pinned artist releases error for {artist_name}: {e}")
+                if results:
+                    return results
+
+            # Official explore new releases
+            explore = self.ytm.get_explore()
+            raw_releases = explore.get('new_releases', [])
+            
+            for item in raw_releases:
+                rel_type = item.get('type', 'Album')
+                # Filter check
+                if filter_type == 'singles' and rel_type.lower() not in ['single', 'ep']:
+                    continue
+                if filter_type == 'albums' and rel_type.lower() != 'album':
+                    continue
+
+                artists = [a.get('name') for a in item.get('artists', []) if isinstance(a, dict) and a.get('name')]
+                artist_name = ', '.join(artists) if artists else 'Various Artists'
+                browse_id = item.get('browseId', '')
+                audio_pl_id = item.get('audioPlaylistId', '')
+                thumb = extract_thumbnail_url(item)
+
+                results.append({
+                    'id': browse_id or audio_pl_id,
+                    'browseId': browse_id,
+                    'audioPlaylistId': audio_pl_id,
+                    'title': item.get('title', 'Unknown Release'),
+                    'artist': artist_name,
+                    'type': rel_type,
+                    'thumbnail': thumb,
+                    'year': 'New Release'
+                })
+
+            if not results:
+                # Fallback search if explore was empty or filtered out
+                search_query = "latest songs 2026" if filter_type == 'singles' else "new album releases 2026"
+                fallback = self.search(search_query, filter_type='songs' if filter_type == 'singles' else 'albums')
+                for item in fallback[:20]:
+                    results.append({
+                        'id': item.get('id', ''),
+                        'browseId': item.get('id', ''),
+                        'title': item.get('title', ''),
+                        'artist': item.get('artist', 'Unknown Artist'),
+                        'type': 'Single' if filter_type == 'singles' else 'Album',
+                        'thumbnail': item.get('thumbnail', ''),
+                        'year': 'New Release'
+                    })
+
+            return results
+        except Exception as e:
+            print(f"[YTMusic] New releases fetch error: {e}")
+            return []
 
 yt_service = YTMusicService()

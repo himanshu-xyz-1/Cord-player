@@ -35,7 +35,7 @@
         </button>
       </div>
 
-      <!-- Main Navigation (ONLY 3 Tabs: 1. Home, 2. Search, 3. Library) -->
+      <!-- Main Navigation -->
       <nav class="nav-menu">
         <button class="nav-item active" data-tab="home">
           <span class="material-symbols-rounded">home</span>
@@ -44,6 +44,10 @@
         <button class="nav-item" data-tab="search">
           <span class="material-symbols-rounded">search</span>
           <span>Search</span>
+        </button>
+        <button class="nav-item" data-tab="new-releases">
+          <span class="material-symbols-rounded">new_releases</span>
+          <span>New Drops</span>
         </button>
         <button class="nav-item" data-tab="library">
           <span class="material-symbols-rounded">library_music</span>
@@ -95,6 +99,10 @@
         </div>
 
         <div class="header-actions">
+          <button id="header-cord-decide-btn" class="header-pill-btn cord-decide-btn" title="Let Cord Decide (Instant Smart Play based on your vibe & history)">
+            <span class="material-symbols-rounded">casino</span>
+            <span>Let Cord Decide</span>
+          </button>
           <button id="theme-mode-toggle" class="header-pill-btn" title="Toggle Dark/Light Mode">
             <span class="material-symbols-rounded" id="theme-mode-icon">dark_mode</span>
             <span id="theme-mode-label">Dark</span>
@@ -316,6 +324,19 @@
               </div>
             </div>
 
+            <!-- Made For You / Startup Auto-Mixes Section -->
+            <div id="home-auto-mixes-section" style="margin-top: 28px; margin-bottom: 32px;">
+              <div class="section-header">
+                <div class="header-title-box">
+                  <h3>✨ Made For You</h3>
+                  <span class="subtitle">Personalized startup mixes tailored to your favorite genres & vibes</span>
+                </div>
+              </div>
+              <div id="home-auto-mixes-grid" class="cards-grid auto-mixes-grid">
+                <!-- Dynamically populated from local taste engine -->
+              </div>
+            </div>
+
             <!-- Recommended For You Section -->
             <div class="section-header">
               <div class="header-title-box">
@@ -336,6 +357,18 @@
             </div>
             <div id="trending-grid" class="cards-grid">
               <!-- Dynamically populated -->
+            </div>
+
+            <!-- Dynamic Never-Ending Shelves Container -->
+            <div id="home-infinite-shelves">
+              <!-- Personalized endless shelves loaded as user scrolls -->
+            </div>
+
+            <!-- Music Infinite Scroll Sentinel -->
+            <div id="home-music-sentinel" class="infinite-sentinel">
+              <div class="infinite-loader-dots">
+                <span></span><span></span><span></span>
+              </div>
             </div>
           </div>
 
@@ -382,8 +415,45 @@
             <div id="podcast-shows-grid" class="cards-grid">
               <!-- Dynamically populated -->
             </div>
+
+            <!-- Dynamic Never-Ending Podcast Shelves Container -->
+            <div id="podcast-infinite-shelves">
+              <!-- Continuous podcast categories loaded on scroll -->
+            </div>
+
+            <!-- Podcasts Infinite Scroll Sentinel -->
+            <div id="home-podcasts-sentinel" class="infinite-sentinel">
+              <div class="infinite-loader-dots">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
           </div>
 
+        </div>
+
+        <!-- NEW RELEASES / FRESH DROPS VIEW -->
+        <div id="view-new-releases" class="tab-view">
+          <!-- Hero Banner -->
+          <div class="hero-banner releases-hero">
+            <div class="hero-content">
+              <span class="hero-tag">FRESH OUT</span>
+              <h2>New Releases & Fresh Drops</h2>
+              <p>Discover brand new studio albums, singles, and EPs hot off the press globally and from your favorite artists.</p>
+            </div>
+          </div>
+
+          <!-- Filter Pills -->
+          <div class="search-filters" style="margin: 20px 0 24px 0;">
+            <button class="filter-chip active" data-rel-filter="all">All Releases</button>
+            <button class="filter-chip" data-rel-filter="singles">Singles & EPs</button>
+            <button class="filter-chip" data-rel-filter="albums">Albums</button>
+            <button class="filter-chip" data-rel-filter="pinned">My Pinned Artists</button>
+          </div>
+
+          <!-- New Releases Grid -->
+          <div id="new-releases-grid" class="cards-grid">
+            <!-- Dynamically populated -->
+          </div>
         </div>
 
         <!-- 3. LIBRARY VIEW (Parent Hub) -->

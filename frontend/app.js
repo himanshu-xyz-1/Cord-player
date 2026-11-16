@@ -59,6 +59,9 @@ class CordPlayer {
     this.renderRecentHistory();
     this.initAudioDevices();
     this.updateStorageInfo();
+    this.initSmartTasteEngine();
+    this.initInfiniteHomeFeed();
+    this.initNewReleases();
     
     if (this.sessionRestore) {
       this.restoreSession();
@@ -167,6 +170,16 @@ class CordPlayer {
       this.autoplay = this.settings.autoplay;
       const chk = document.getElementById('cfg-autoplay');
       if (chk) chk.checked = this.settings.autoplay;
+    }
+
+    if (this.settings.discordRpc !== undefined) {
+      const dChk = document.getElementById('cfg-discord-enable');
+      if (dChk) dChk.checked = this.settings.discordRpc;
+    }
+
+    if (this.settings.discordArtist !== undefined) {
+      const daChk = document.getElementById('cfg-discord-artist');
+      if (daChk) daChk.checked = this.settings.discordArtist;
     }
   }
 
@@ -530,6 +543,11 @@ class CordPlayer {
     document.getElementById('header-cinema-btn')?.addEventListener('click', () => this.openCinemaMode());
     document.getElementById('close-cinema-btn')?.addEventListener('click', () => this.closeCinemaMode());
 
+    // Let Cord Decide 🎲 Quick Action
+    document.getElementById('header-cord-decide-btn')?.addEventListener('click', () => {
+      this.letCordDecide();
+    });
+
     // Artist Profile Action Buttons
     document.getElementById('artist-pin-toggle-btn')?.addEventListener('click', () => {
       this.togglePinCurrentArtist();
@@ -621,6 +639,25 @@ class CordPlayer {
       this.saveSettings();
     });
 
+    // Discord Rich Presence Toggles
+    document.getElementById('cfg-discord-enable')?.addEventListener('change', (e) => {
+      this.settings.discordRpc = e.target.checked;
+      this.saveSettings();
+      if (!e.target.checked) {
+        fetch('/api/discord_rpc/clear', { method: 'POST' }).catch(() => {});
+      } else {
+        this.syncDiscordRPC();
+      }
+    });
+
+    document.getElementById('cfg-discord-artist')?.addEventListener('change', (e) => {
+      this.settings.discordArtist = e.target.checked;
+      this.saveSettings();
+      if (this.settings.discordRpc !== false) {
+        this.syncDiscordRPC();
+      }
+    });
+
     // Equalizer Preset change
     document.getElementById('eq-preset-select')?.addEventListener('change', (e) => {
       this.applyEqPreset(e.target.value);
@@ -693,6 +730,11 @@ class CordPlayer {
     });
     if (tabId === 'search' && !this.searchInput.value.trim()) {
       this.showSearchIdleState();
+    }
+    if (tabId === 'new-releases') {
+      if (!this.newReleasesLoaded) {
+        this.loadNewReleases(this.activeRelFilter || 'all');
+      }
     }
   }
 
@@ -1397,22 +1439,49 @@ class CordPlayer {
   async openArtistProfile(artistIdOrName) {
     this.switchTab('artist');
     
-    document.getElementById('artist-profile-name').innerText = `Loading ${artistIdOrName}...`;
-    document.getElementById('artist-profile-desc').innerText = '';
+    this.artistRequestId = (this.artistRequestId || 0) + 1;
+    const currentReq = this.artistRequestId;
+    const displayName = typeof artistIdOrName === 'string' ? artistIdOrName : (artistIdOrName?.name || 'Artist');
+
+    // Immediately reset header & avatar to prevent old artist flash
+    document.getElementById('artist-profile-name').innerText = displayName;
+    document.getElementById('artist-profile-avatar').src = '/assets/avatars/default.svg';
+    document.getElementById('artist-profile-desc').innerText = 'Loading artist profile & top songs...';
+    this.currentArtistProfile = null;
+    this.updateArtistPinButton();
+
+    // Render skeleton placeholders to prevent jarring layout jump
+    const skeletonRows = Array(5).fill(0).map((_, i) => `
+      <div class="artist-skeleton-row">
+        <div class="skeleton-shimmer" style="width: 20px; height: 16px;"></div>
+        <div class="skeleton-shimmer" style="width: 44px; height: 44px; border-radius: 6px;"></div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+          <div class="skeleton-shimmer" style="width: ${40 + (i % 3) * 15}%; height: 14px;"></div>
+          <div class="skeleton-shimmer" style="width: ${25 + (i % 2) * 10}%; height: 12px;"></div>
+        </div>
+        <div class="skeleton-shimmer" style="width: 38px; height: 12px;"></div>
+      </div>
+    `).join('');
+    document.getElementById('artist-top-songs-list').innerHTML = skeletonRows;
     document.getElementById('artist-latest-releases-grid').innerHTML = '<div class="empty-state"><p>Loading latest releases...</p></div>';
-    document.getElementById('artist-top-songs-list').innerHTML = '<div class="empty-state"><p>Loading top tracks...</p></div>';
     document.getElementById('artist-albums-grid').innerHTML = '';
     document.getElementById('artist-singles-grid').innerHTML = '';
     document.getElementById('artist-related-grid').innerHTML = '';
 
     try {
-      const res = await fetch(`/api/artist/${encodeURIComponent(artistIdOrName)}`);
+      const res = await fetch(`/api/artist/${encodeURIComponent(displayName)}`);
       const data = await res.json();
+      
+      // If user navigated to another artist while this was fetching, drop this stale response!
+      if (this.artistRequestId !== currentReq) return;
+
       this.currentArtistProfile = data;
 
       // Header Meta
-      document.getElementById('artist-profile-name').innerText = data.name;
-      document.getElementById('artist-profile-avatar').src = data.avatar || '/assets/avatars/default.svg';
+      document.getElementById('artist-profile-name').innerText = data.name || displayName;
+      if (data.avatar) {
+        document.getElementById('artist-profile-avatar').src = data.avatar;
+      }
       document.getElementById('artist-profile-desc').innerText = data.description || 'Verified Artist';
       this.updateArtistPinButton();
 
@@ -1508,8 +1577,10 @@ class CordPlayer {
       }
 
     } catch (e) {
+      if (this.artistRequestId !== currentReq) return;
       console.error('Artist profile error:', e);
-      document.getElementById('artist-profile-name').innerText = artistIdOrName;
+      document.getElementById('artist-profile-name').innerText = displayName;
+      document.getElementById('artist-top-songs-list').innerHTML = '<div class="empty-state"><p>Could not load tracks for this artist.</p></div>';
     }
   }
 
@@ -1573,12 +1644,12 @@ class CordPlayer {
       }
     }
 
-    if (!collectionData || (!collectionData.tracks && collectionData.id)) {
+    if (!collectionData || (!collectionData.tracks && (collectionData.id || collectionData.browseId || collectionData.audioPlaylistId))) {
       heroTitle.innerText = 'Loading Collection...';
       table.innerHTML = '<div class="empty-state"><p>Loading tracks...</p></div>';
       
-      const id = typeof itemOrId === 'string' ? itemOrId : itemOrId.id;
-      const isPl = String(id).startsWith('VLPL') || String(id).startsWith('PL') || String(id).startsWith('RD') || type === 'playlist';
+      const id = typeof itemOrId === 'string' ? itemOrId : (itemOrId.browseId || itemOrId.audioPlaylistId || itemOrId.id);
+      const isPl = String(id).startsWith('VLPL') || String(id).startsWith('PL') || String(id).startsWith('RD') || String(id).startsWith('OLAK') || type === 'playlist';
       const endpoint = isPl ? `/api/playlist/${encodeURIComponent(id)}` : `/api/album/${encodeURIComponent(id)}`;
 
       try {
@@ -2808,9 +2879,14 @@ class CordPlayer {
 
   // --- DISCORD RICH PRESENCE ---
   syncDiscordRPC() {
+    const isRpcEnabled = (this.settings.discordRpc !== false) && (document.getElementById('cfg-discord-enable')?.checked ?? true);
+    if (!isRpcEnabled) {
+      fetch('/api/discord_rpc/clear', { method: 'POST' }).catch(() => {});
+      return;
+    }
     if (!this.currentTrack) return;
-    const enabled = document.getElementById('cfg-discord-enable')?.checked ?? true;
-    if (!enabled) return;
+
+    const showArtist = (this.settings.discordArtist !== false) && (document.getElementById('cfg-discord-artist')?.checked ?? true);
 
     fetch('/api/discord_rpc', {
       method: 'POST',
@@ -2821,6 +2897,7 @@ class CordPlayer {
         duration: Math.round(this.audio.duration || 0),
         position: Math.round(this.audio.currentTime || 0),
         is_playing: this.isPlaying,
+        show_artist: showArtist,
         thumbnail: this.currentTrack.thumbnail || ''
       })
     }).catch(e => console.log('RPC Sync:', e));
@@ -3267,6 +3344,651 @@ class CordPlayer {
       }
     } catch (e) {
       console.log('Session restore note:', e);
+    }
+  }
+
+  // --- FLOATING TOAST NOTIFICATION ---
+  showToast(message, duration = 3200) {
+    let container = document.getElementById('cord-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'cord-toast-container';
+      container.style.cssText = `
+        position: fixed;
+        bottom: 96px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+      `;
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'cord-floating-toast';
+    toast.style.cssText = `
+      background: rgba(18, 18, 20, 0.94);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 13, 46, 0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      color: #FFFFFF;
+      padding: 10px 20px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(12px) scale(0.96);
+      transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: auto;
+    `;
+    toast.innerHTML = `<span>${message}</span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0) scale(1)';
+    });
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(12px) scale(0.96)';
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
+
+  // --- SMART LOCAL TASTE ENGINE & STARTUP AUTO-MIXES ---
+  initSmartTasteEngine() {
+    try {
+      const container = document.getElementById('home-auto-mixes-grid');
+      if (!container) return;
+
+      const historyPool = Array.isArray(this.history) ? this.history : [];
+      const favPool = Array.isArray(this.favorites) ? this.favorites : [];
+      const allUserTracks = [...historyPool, ...favPool];
+
+      // Genre classification rules
+      const GENRES = {
+        gym: {
+          name: '⚡ Gym Boost & Phonk',
+          desc: 'High-octane gym beats, phonk overdrive & workout fuel',
+          badge: 'GYM & PHONK',
+          grad: 'grad-gym',
+          keywords: ['phonk', 'drift', 'gym', 'workout', 'bass', 'hardstyle', 'kordhell', 'dvrst', 'shadxwbxrn', 'ghostface', 'brazilian', 'aggressive', 'rave', 'speed', 'tokyo drift', 'sigma', 'override', 'metamorphosis']
+        },
+        punjabi: {
+          name: '🔥 Punjabi Heat',
+          desc: 'Punjabi bangers, modern street anthems & folk beats',
+          badge: 'PUNJABI HEAT',
+          grad: 'grad-punjabi',
+          keywords: ['punjabi', 'sidhu', 'moose', 'aujla', 'ap dhillon', 'shubh', 'diljit', 'karan', 'amrit', 'bawa', 'chani', 'prophec', 'jatt', 'gurinder', 'tarnvir', 'sukha', 'arjan', 'dhillon', 'cheema', 'wazir']
+        },
+        chill: {
+          name: '🌙 Late Night Chill & Lofi',
+          desc: 'Slowed, acoustic & calming midnight frequencies',
+          badge: 'LATE NIGHT',
+          grad: 'grad-chill',
+          keywords: ['lofi', 'slowed', 'reverb', 'acoustic', 'chill', 'night', 'sleep', 'rain', 'coffee', 'calm', 'peaceful', 'piano', 'study', 'relax', 'midnight', 'aesthetic', 'ambient']
+        },
+        english: {
+          name: '🌐 Global Pop & Rap',
+          desc: 'Chart-topping international hits and billboard anthems',
+          badge: 'GLOBAL HITS',
+          grad: 'grad-daily2',
+          keywords: ['weeknd', 'drake', 'eminem', 'travis', 'billie', 'post malone', 'ed sheeran', 'dua lipa', 'ariana', 'justin bieber', 'taylor swift', 'bruno mars', 'charlie puth', 'olivia rodrigo', 'coldplay', 'imagine dragons', 'kanye', 'kendrick', 'pop', 'rap']
+        },
+        bollywood: {
+          name: '💖 Bollywood Melodies',
+          desc: 'Soulful Bollywood songs, romantic duets & iconic melodies',
+          badge: 'BOLLYWOOD',
+          grad: 'grad-hiphop',
+          keywords: ['arijit', 'pritam', 'atif', 'mohit', 'shreya', 'jubin', 'bollywood', 'hindi', 'armaan', 'darshan', 'neha', 'sonu', 'kumar sanu', 'alka', 'sharma', 'sufi']
+        }
+      };
+
+      // Tally artist frequencies
+      const artistCounts = {};
+      allUserTracks.forEach(t => {
+        const art = (t.artist || '').trim();
+        if (art && art !== 'Unknown Artist') {
+          artistCounts[art] = (artistCounts[art] || 0) + 1;
+        }
+      });
+
+      const topArtists = Object.keys(artistCounts).sort((a, b) => artistCounts[b] - artistCounts[a]);
+
+      // Categorize user's tracks
+      const categorized = { gym: [], punjabi: [], chill: [], english: [], bollywood: [] };
+      const seenIds = new Set();
+
+      allUserTracks.forEach(t => {
+        if (!t || !t.id || seenIds.has(t.id)) return;
+        seenIds.add(t.id);
+
+        const text = `${t.title || ''} ${t.artist || ''}`.toLowerCase();
+        for (const [key, meta] of Object.entries(GENRES)) {
+          if (meta.keywords.some(kw => text.includes(kw))) {
+            categorized[key].push(t);
+          }
+        }
+      });
+
+      const mixes = [];
+
+      // 1. Gym / Phonk Mix
+      if (categorized.gym.length >= 2 || (topArtists.length > 0 && categorized.gym.length > 0)) {
+        mixes.push({
+          id: 'automix_gym',
+          title: GENRES.gym.name,
+          artist: 'Cord Taste Engine',
+          type: 'Auto Mix',
+          description: GENRES.gym.desc,
+          badge: GENRES.gym.badge,
+          gradClass: GENRES.gym.grad,
+          year: 'Updated Today',
+          isAutoMix: true,
+          tracks: categorized.gym
+        });
+      }
+
+      // 2. Punjabi Heat Mix
+      if (categorized.punjabi.length >= 2 || (topArtists.length > 0 && categorized.punjabi.length > 0)) {
+        mixes.push({
+          id: 'automix_punjabi',
+          title: GENRES.punjabi.name,
+          artist: 'Cord Taste Engine',
+          type: 'Auto Mix',
+          description: GENRES.punjabi.desc,
+          badge: GENRES.punjabi.badge,
+          gradClass: GENRES.punjabi.grad,
+          year: 'Updated Today',
+          isAutoMix: true,
+          tracks: categorized.punjabi
+        });
+      }
+
+      // 3. Daily Mix based on #1 Top Artist
+      if (topArtists.length > 0) {
+        const topArtist = topArtists[0];
+        const artistTracks = allUserTracks.filter(t => (t.artist || '').toLowerCase().includes(topArtist.toLowerCase()));
+        mixes.push({
+          id: 'automix_daily1',
+          title: `🌟 Daily Mix: ${topArtist}`,
+          artist: `${topArtist} & Matching Sounds`,
+          type: 'Daily Mix',
+          description: `Personalized mix featuring ${topArtist} and similar tracks you love`,
+          badge: 'DAILY MIX',
+          gradClass: 'grad-daily1',
+          year: 'Updated Today',
+          isAutoMix: true,
+          tracks: artistTracks
+        });
+      }
+
+      // 4. Late Night Chill / Lofi Mix
+      if (categorized.chill.length >= 2 || (topArtists.length > 1 && categorized.chill.length > 0)) {
+        mixes.push({
+          id: 'automix_chill',
+          title: GENRES.chill.name,
+          artist: 'Cord Taste Engine',
+          type: 'Auto Mix',
+          description: GENRES.chill.desc,
+          badge: GENRES.chill.badge,
+          gradClass: GENRES.chill.grad,
+          year: 'Updated Today',
+          isAutoMix: true,
+          tracks: categorized.chill
+        });
+      }
+
+      // 5. English / Global Pop Mix
+      if (categorized.english.length >= 2) {
+        mixes.push({
+          id: 'automix_english',
+          title: GENRES.english.name,
+          artist: 'Cord Taste Engine',
+          type: 'Auto Mix',
+          description: GENRES.english.desc,
+          badge: GENRES.english.badge,
+          gradClass: GENRES.english.grad,
+          year: 'Updated Today',
+          isAutoMix: true,
+          tracks: categorized.english
+        });
+      }
+
+      // Starter mixes fallback if user is brand new
+      if (mixes.length < 3) {
+        const starterMixes = [
+          {
+            id: 'automix_starter_gym',
+            title: '⚡ Gym Boost & Phonk',
+            artist: 'Cord Taste Engine',
+            type: 'Auto Mix',
+            description: 'Phonk drift & heavy workout bangers for your training sessions',
+            badge: 'WORKOUT BOOST',
+            gradClass: 'grad-gym',
+            year: 'Curated Starter',
+            isAutoMix: true,
+            tracks: []
+          },
+          {
+            id: 'automix_starter_punjabi',
+            title: '🔥 Punjabi Street Hits',
+            artist: 'Cord Taste Engine',
+            type: 'Auto Mix',
+            description: 'Top trending Punjabi bangers and street anthems',
+            badge: 'PUNJABI ANTHEMS',
+            gradClass: 'grad-punjabi',
+            year: 'Curated Starter',
+            isAutoMix: true,
+            tracks: []
+          },
+          {
+            id: 'automix_starter_chill',
+            title: '🌙 Late Night Chill & Lofi',
+            artist: 'Cord Taste Engine',
+            type: 'Auto Mix',
+            description: 'Mellow beats, slowed & reverb, and midnight peace',
+            badge: 'CHILL VIBES',
+            gradClass: 'grad-chill',
+            year: 'Curated Starter',
+            isAutoMix: true,
+            tracks: []
+          },
+          {
+            id: 'automix_starter_viral',
+            title: '🌐 Global Viral Discoveries',
+            artist: 'Cord Taste Engine',
+            type: 'Auto Mix',
+            description: 'Fresh viral tracks breaking charts worldwide',
+            badge: 'VIRAL CHARTS',
+            gradClass: 'grad-daily2',
+            year: 'Curated Starter',
+            isAutoMix: true,
+            tracks: []
+          }
+        ];
+
+        for (const starter of starterMixes) {
+          if (!mixes.some(m => m.id.includes(starter.badge.toLowerCase())) && mixes.length < 4) {
+            mixes.push(starter);
+          }
+        }
+      }
+
+      this.autoMixes = mixes;
+      this.renderAutoMixes(mixes, container);
+
+    } catch (e) {
+      console.error('Smart Taste Engine startup error:', e);
+    }
+  }
+
+  renderAutoMixes(mixes, container) {
+    if (!container || !mixes || mixes.length === 0) return;
+    container.innerHTML = '';
+
+    mixes.forEach(mix => {
+      const card = document.createElement('div');
+      card.className = 'auto-mix-card';
+      const trackCountLabel = (mix.tracks && mix.tracks.length > 0) ? `${mix.tracks.length} tracks` : 'Smart Radio Mix';
+
+      card.innerHTML = `
+        <div class="auto-mix-cover ${mix.gradClass || 'grad-daily1'}">
+          <span class="auto-mix-badge">${mix.badge || 'MIX'}</span>
+          <button class="auto-mix-play-btn" title="Play ${mix.title}">
+            <span class="material-symbols-rounded">play_arrow</span>
+          </button>
+        </div>
+        <div class="auto-mix-info">
+          <h4 title="${mix.title}">${mix.title}</h4>
+          <p>${mix.description || trackCountLabel}</p>
+        </div>
+      `;
+
+      // Play button action
+      card.querySelector('.auto-mix-play-btn')?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (mix.tracks && mix.tracks.length > 0) {
+          this.setQueue(mix.tracks, 0);
+          this.showToast(`▶ Playing ${mix.title}`);
+        } else {
+          // Starter mix without preloaded tracks: search and play
+          const q = mix.title.replace(/[⚡🔥🌙🌐🌟]/g, '').trim();
+          this.showToast(`Loading ${mix.title}...`);
+          try {
+            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&filter=songs`);
+            const data = await res.json();
+            const tracks = (data.results || data || []).slice(0, 20);
+            if (tracks.length > 0) {
+              mix.tracks = tracks;
+              this.setQueue(tracks, 0);
+              this.showToast(`▶ Playing ${mix.title}`);
+            }
+          } catch (err) {}
+        }
+      });
+
+      // Card click opens collection
+      card.addEventListener('click', async () => {
+        if (!mix.tracks || mix.tracks.length === 0) {
+          const q = mix.title.replace(/[⚡🔥🌙🌐🌟]/g, '').trim();
+          try {
+            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&filter=songs`);
+            const data = await res.json();
+            mix.tracks = (data.results || data || []).slice(0, 25);
+          } catch (err) {}
+        }
+        this.openCollection(mix, 'playlist');
+      });
+
+      container.appendChild(card);
+    });
+  }
+
+  // --- "LET CORD DECIDE" 🎲 QUICK ACTION ---
+  async letCordDecide() {
+    const hour = new Date().getHours();
+    let timeVibe = 'Daytime Energy';
+    let filterKeywords = [];
+
+    if (hour >= 5 && hour < 11) {
+      timeVibe = 'Morning Uplift & Focus';
+      filterKeywords = ['morning', 'acoustic', 'chill', 'fresh', 'uplift', 'pop', 'lofi'];
+    } else if (hour >= 11 && hour < 17) {
+      timeVibe = 'Afternoon Beats';
+      filterKeywords = ['pop', 'hits', 'focus', 'beat', 'groove', 'punjabi', 'hip hop'];
+    } else if (hour >= 17 && hour < 21) {
+      timeVibe = 'Evening Gym & Workout Hype';
+      filterKeywords = ['phonk', 'gym', 'workout', 'bass', 'trap', 'hype', 'punjabi', 'rap', 'hardstyle'];
+    } else {
+      timeVibe = 'Late Night Deep Chill';
+      filterKeywords = ['lofi', 'slowed', 'night', 'chill', 'acoustic', 'reverb', 'soft', 'calm'];
+    }
+
+    const candidatePool = [...(this.favorites || []), ...(this.history || [])];
+    let selectedTrack = null;
+
+    if (candidatePool.length > 0) {
+      // Find tracks matching time-of-day vibe
+      const matchingTracks = candidatePool.filter(t => {
+        const text = `${t.title || ''} ${t.artist || ''}`.toLowerCase();
+        return filterKeywords.some(kw => text.includes(kw));
+      });
+
+      const poolToUse = (matchingTracks.length > 0) ? matchingTracks : candidatePool;
+      const withoutCurrent = poolToUse.filter(t => !this.currentTrack || t.id !== this.currentTrack.id);
+      const finalPool = withoutCurrent.length > 0 ? withoutCurrent : poolToUse;
+      selectedTrack = finalPool[Math.floor(Math.random() * finalPool.length)];
+    } else if (this.recommendedTracks && this.recommendedTracks.length > 0) {
+      selectedTrack = this.recommendedTracks[Math.floor(Math.random() * this.recommendedTracks.length)];
+    } else if (this.trendingTracks && this.trendingTracks.length > 0) {
+      selectedTrack = this.trendingTracks[Math.floor(Math.random() * this.trendingTracks.length)];
+    }
+
+    if (!selectedTrack) {
+      this.showToast('Play a few tracks first so Cord can learn your taste! 🎵');
+      return;
+    }
+
+    // Play track immediately
+    this.playTrack(selectedTrack, [selectedTrack]);
+    this.showToast(`🎲 Cord Decided: "${selectedTrack.title}" for your ${timeVibe}!`);
+
+    // Auto-generate matching queue via up_next
+    try {
+      const res = await fetch(`/api/up_next/${encodeURIComponent(selectedTrack.id)}`);
+      const upNextTracks = await res.json();
+      if (Array.isArray(upNextTracks) && upNextTracks.length > 0) {
+        this.queue = [selectedTrack, ...upNextTracks];
+        this.currentIndex = 0;
+        this.renderQueue();
+      }
+    } catch (e) {}
+  }
+
+  // --- INFINITE NEVER-ENDING HOME FEED ---
+  initInfiniteHomeFeed() {
+    this.infiniteMusicShelfIndex = 0;
+    this.isLoadingMusicShelf = false;
+    this.infinitePodcastShelfIndex = 0;
+    this.isLoadingPodcastShelf = false;
+
+    // Observer for Music infinite scroll
+    const musicSentinel = document.getElementById('home-music-sentinel');
+    if (musicSentinel && window.IntersectionObserver) {
+      const musicObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !this.isLoadingMusicShelf) {
+          const homeMusic = document.getElementById('home-music-section');
+          if (homeMusic && homeMusic.classList.contains('active')) {
+            this.loadNextMusicShelf();
+          }
+        }
+      }, { rootMargin: '300px' });
+      musicObserver.observe(musicSentinel);
+    }
+
+    // Observer for Podcasts infinite scroll
+    const podcastSentinel = document.getElementById('home-podcasts-sentinel');
+    if (podcastSentinel && window.IntersectionObserver) {
+      const podcastObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !this.isLoadingPodcastShelf) {
+          const homePods = document.getElementById('home-podcasts-section');
+          if (homePods && homePods.classList.contains('active')) {
+            this.loadNextPodcastShelf();
+          }
+        }
+      }, { rootMargin: '300px' });
+      podcastObserver.observe(podcastSentinel);
+    }
+  }
+
+  async loadNextMusicShelf() {
+    if (this.isLoadingMusicShelf) return;
+    this.isLoadingMusicShelf = true;
+
+    const container = document.getElementById('home-infinite-shelves');
+    if (!container) {
+      this.isLoadingMusicShelf = false;
+      return;
+    }
+
+    const historyPool = Array.isArray(this.history) ? this.history : [];
+    const topArtists = [...new Set(historyPool.map(h => h.artist))].filter(Boolean);
+
+    // Dynamic infinite shelf definitions
+    const shelfGenerators = [
+      {
+        title: topArtists[0] ? `Because you like ${topArtists[0]}` : '🔥 Heavy Bass & Workout Energy',
+        sub: 'Hand-picked sounds you will vibe with',
+        query: topArtists[0] ? `${topArtists[0]} songs` : 'gym phonk workout bass'
+      },
+      {
+        title: '💎 Deep Cuts & Underrated Bangers',
+        sub: 'Hidden gems and trending tracks off the charts',
+        query: 'punjabi underground beats hits'
+      },
+      {
+        title: topArtists[1] ? `More from ${topArtists[1]}` : '🌙 Late Night Slowed & Acoustic',
+        sub: 'Slowed, aesthetic & midnight frequencies',
+        query: topArtists[1] ? `${topArtists[1]} songs` : 'slowed and reverb lofi acoustic'
+      },
+      {
+        title: '⚡ Phonk Drift & Gym Overdrive',
+        sub: 'Aggressive drift phonk & motivation beats',
+        query: 'phonk drift gym motivation aggressive'
+      },
+      {
+        title: '🔥 Punjabi Chartbusters',
+        sub: 'Top trending Punjabi anthems and street hits',
+        query: 'punjabi hits latest top songs'
+      },
+      {
+        title: '🌐 Viral Global Anthems',
+        sub: 'Worldwide billboard toppers and viral sensations',
+        query: 'global viral top hits 2026'
+      },
+      {
+        title: '✨ Desi Hip Hop Anthems',
+        sub: 'Raw lyricism, heavy beats and street poetry',
+        query: 'desi hip hop underground rap'
+      },
+      {
+        title: '☕ Acoustic & Lo-Fi Chillout',
+        sub: 'Unwind and relax with gentle melodies',
+        query: 'lofi beats to study relax to chill'
+      }
+    ];
+
+    const currentDef = shelfGenerators[this.infiniteMusicShelfIndex % shelfGenerators.length];
+    this.infiniteMusicShelfIndex++;
+
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(currentDef.query)}&filter=songs`);
+      const data = await res.json();
+      const tracks = (data.results || data || []).slice(0, 10);
+
+      if (tracks.length > 0) {
+        const shelf = document.createElement('div');
+        shelf.className = 'home-shelf-section';
+        shelf.innerHTML = `
+          <div class="section-header">
+            <div class="header-title-box">
+              <h3>${currentDef.title}</h3>
+              <span class="subtitle">${currentDef.sub}</span>
+            </div>
+          </div>
+          <div class="cards-grid"></div>
+        `;
+        const grid = shelf.querySelector('.cards-grid');
+        this.renderCards(tracks, grid);
+        container.appendChild(shelf);
+      }
+    } catch (e) {
+      console.error('Infinite shelf load error:', e);
+    } finally {
+      this.isLoadingMusicShelf = false;
+    }
+  }
+
+  async loadNextPodcastShelf() {
+    if (this.isLoadingPodcastShelf) return;
+    this.isLoadingPodcastShelf = true;
+
+    const container = document.getElementById('podcast-infinite-shelves');
+    if (!container) {
+      this.isLoadingPodcastShelf = false;
+      return;
+    }
+
+    const podShelves = [
+      { title: '🔍 True Crime & Mysteries', sub: 'Chilling real stories, investigations & unresolved cases', q: 'true crime podcast' },
+      { title: '🤖 Tech, AI & Future Minds', sub: 'Conversations with technologists, builders & futurists', q: 'artificial intelligence tech podcast' },
+      { title: '😂 Comedy & Laughs', sub: 'Hilarious discussions and comedian interviews', q: 'comedy talk show podcast' },
+      { title: '💼 Business, Money & Startups', sub: 'Actionable lessons from entrepreneurs and investors', q: 'startup business podcast' },
+      { title: '🧠 Mindset, Fitness & Health', sub: 'High-performance habits, fitness advice & mental wellness', q: 'health fitness mindset podcast' },
+      { title: '📖 Immersive Audio Stories', sub: 'Fictional tales, horror narratives & audio dramas', q: 'audio drama story podcast' }
+    ];
+
+    const currentDef = podShelves[this.infinitePodcastShelfIndex % podShelves.length];
+    this.infinitePodcastShelfIndex++;
+
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(currentDef.q)}&filter=episodes`);
+      const data = await res.json();
+      const eps = (data.results || data || []).slice(0, 8);
+
+      if (eps.length > 0) {
+        const shelf = document.createElement('div');
+        shelf.className = 'home-shelf-section';
+        shelf.innerHTML = `
+          <div class="section-header">
+            <div class="header-title-box">
+              <h3>${currentDef.title}</h3>
+              <span class="subtitle">${currentDef.sub}</span>
+            </div>
+          </div>
+          <div class="cards-grid"></div>
+        `;
+        const grid = shelf.querySelector('.cards-grid');
+        this.renderCards(eps, grid);
+        container.appendChild(shelf);
+      }
+    } catch (e) {
+      console.error('Infinite podcast shelf load error:', e);
+    } finally {
+      this.isLoadingPodcastShelf = false;
+    }
+  }
+
+  // --- NEW RELEASES & FRESH DROPS HUB ---
+  initNewReleases() {
+    this.activeRelFilter = 'all';
+    this.newReleasesLoaded = false;
+
+    // Bind filter chips in #view-new-releases
+    const chips = document.querySelectorAll('#view-new-releases .filter-chip[data-rel-filter]');
+    chips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        chips.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        this.activeRelFilter = chip.dataset.relFilter;
+        this.loadNewReleases(this.activeRelFilter);
+      });
+    });
+  }
+
+  async loadNewReleases(filter = 'all') {
+    const grid = document.getElementById('new-releases-grid');
+    if (!grid) return;
+
+    grid.innerHTML = '<div class="empty-state"><p>Loading latest releases & fresh drops...</p></div>';
+
+    try {
+      const pinnedStr = (this.pinnedArtists || []).map(a => a.name).join(',');
+      const res = await fetch(`/api/new_releases?filter=${encodeURIComponent(filter)}&pinned=${encodeURIComponent(pinnedStr)}`);
+      const data = await res.json();
+      const releases = data.releases || [];
+
+      this.newReleasesLoaded = true;
+
+      if (releases.length === 0) {
+        grid.innerHTML = '<div class="empty-state"><p>No new releases found for this filter.</p></div>';
+        return;
+      }
+
+      grid.innerHTML = '';
+      releases.forEach(rel => {
+        const card = document.createElement('div');
+        card.className = 'music-card';
+        card.innerHTML = `
+          <div class="card-thumb-wrap">
+            <img src="${rel.thumbnail || '/assets/avatars/music.svg'}" alt="${rel.title}" loading="lazy">
+            <span class="release-type-badge">${(rel.type || 'Release').toUpperCase()}${rel.year && rel.year !== 'New Release' ? ' • ' + rel.year : ''}</span>
+            <div class="card-play-overlay">
+              <button class="play-circle-btn" title="Play"><span class="material-symbols-rounded">play_arrow</span></button>
+            </div>
+          </div>
+          <div class="card-info">
+            <div class="card-title" title="${rel.title}">${rel.title}</div>
+            <div class="card-artist">${rel.artist || 'Various Artists'}</div>
+          </div>
+        `;
+
+        card.addEventListener('click', () => {
+          this.openCollection(rel, rel.type?.toLowerCase() === 'single' ? 'single' : 'album');
+        });
+
+        grid.appendChild(card);
+      });
+
+    } catch (e) {
+      console.error('New releases load error:', e);
+      grid.innerHTML = '<div class="empty-state"><p>Failed to load new releases.</p></div>';
     }
   }
 

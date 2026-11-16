@@ -53,8 +53,14 @@ class DiscordRPC:
                     if self.connected and self.rpc:
                         try:
                             self.rpc.clear()
+                        except Exception as e:
+                            print(f"[Discord RPC Clear Error] {e}")
+                        try:
+                            self.rpc.close()
                         except Exception:
                             pass
+                        self.connected = False
+                        self.rpc = None
             except Exception as e:
                 print(f"[Discord RPC Worker Exception] {e}")
 
