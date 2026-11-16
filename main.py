@@ -96,10 +96,19 @@ class WindowAPI:
 
 def launch_pywebview(url: str):
     import webview
+    import gc
+    gc.collect()
 
     wv_data_dir = str(Path.home() / "AppData" / "Local" / "CordPlayer" / "webview")
     os.makedirs(wv_data_dir, exist_ok=True)
     os.environ['WEBVIEW2_USER_DATA_FOLDER'] = wv_data_dir
+    os.environ['WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS'] = (
+        '--renderer-process-limit=1 '
+        '--disable-background-networking '
+        '--disable-component-update '
+        '--disable-features=Translate,OptimizationHints,MediaRouter '
+        '--enable-low-end-device-mode'
+    )
 
     webview.settings['ALLOW_DOWNLOADS'] = True
     webview.settings['OPEN_EXTERNAL_LINKS_IN_BROWSER'] = True

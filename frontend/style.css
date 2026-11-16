@@ -2699,19 +2699,18 @@ body.theme-dark .slider-wrapper {
 }
 
 /* --- STANDALONE FRAMELESS WINDOW CONTROLS & DRAG REGION --- */
-.top-header, .sidebar-header {
-  -webkit-app-region: drag;
-  user-select: none;
+#app-drag-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  z-index: 999999;
+  cursor: pointer;
 }
 
-.search-bar-container,
-.header-actions button,
-.sidebar-header button,
-.sidebar nav,
-.pinned-artists-section,
-.sidebar-visualizer-box,
-.window-controls {
-  -webkit-app-region: no-drag;
+.top-header, .sidebar-header {
+  user-select: none;
 }
 
 .window-controls {

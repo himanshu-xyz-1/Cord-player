@@ -208,19 +208,35 @@ class CordPlayer {
       callNativeAPI('close');
     });
 
-    // Double click header to maximize / restore
-    document.querySelectorAll('.top-header, .sidebar-header').forEach(header => {
+    // Double click header or top border line to maximize / restore
+    let lastHeaderClick = 0;
+    const toggleMaximize = async () => {
+      const isMax = await callNativeAPI('maximize');
+      const maxIcon = document.getElementById('win-max-icon');
+      if (maxIcon && typeof isMax === 'boolean') {
+        maxIcon.innerText = isMax ? 'filter_none' : 'crop_square';
+      }
+      if (isMax === true) {
+        document.body.classList.add('is-maximized');
+      } else if (isMax === false) {
+        document.body.classList.remove('is-maximized');
+      }
+    };
+
+    document.querySelectorAll('.top-header, .sidebar-header, #app-drag-bar').forEach(header => {
       header.addEventListener('dblclick', async (e) => {
         if (e.target.closest('button, input, a, .search-bar-container, .window-controls')) return;
-        const isMax = await callNativeAPI('maximize');
-        const maxIcon = document.getElementById('win-max-icon');
-        if (maxIcon && typeof isMax === 'boolean') {
-          maxIcon.innerText = isMax ? 'filter_none' : 'crop_square';
-        }
-        if (isMax === true) {
-          document.body.classList.add('is-maximized');
-        } else if (isMax === false) {
-          document.body.classList.remove('is-maximized');
+        await toggleMaximize();
+      });
+
+      header.addEventListener('click', async (e) => {
+        if (e.target.closest('button, input, a, .search-bar-container, .window-controls')) return;
+        const now = Date.now();
+        if (now - lastHeaderClick < 320) {
+          lastHeaderClick = 0;
+          await toggleMaximize();
+        } else {
+          lastHeaderClick = now;
         }
       });
     });
